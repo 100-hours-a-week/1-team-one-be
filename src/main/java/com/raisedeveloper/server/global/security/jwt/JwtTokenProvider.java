@@ -1,6 +1,8 @@
 package com.raisedeveloper.server.global.security.jwt;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -45,15 +47,15 @@ public class JwtTokenProvider {
 		this.refreshTtlSeconds = refreshTtlSeconds;
 	}
 
-	public String createAccessToken(JwtClaims claims) {
+	public TokenResult createAccessToken(JwtClaims claims) {
 		return createToken(claims, accessTtlSeconds);
 	}
 
-	public String createRefreshToken(JwtClaims claims) {
+	public TokenResult createRefreshToken(JwtClaims claims) {
 		return createToken(claims, refreshTtlSeconds);
 	}
 
-	private String createToken(JwtClaims claims, long ttlSeconds) {
+	private TokenResult createToken(JwtClaims claims, long ttlSeconds) {
 		Instant now = Instant.now();
 		Instant exp = now.plusSeconds(ttlSeconds);
 
@@ -63,13 +65,15 @@ public class JwtTokenProvider {
 		customClaims.put(JwtClaims.CLAIM_ROLE, claims.role().name());
 		customClaims.put(JwtClaims.CLAIM_TOKEN_TYPE, claims.tokenType().name());
 
-		return Jwts.builder()
+		String token = Jwts.builder()
 			.issuer(issuer)
 			.issuedAt(Date.from(now))
 			.expiration(Date.from(exp))
 			.claims(customClaims)
 			.signWith(secretKey, Jwts.SIG.HS256)
 			.compact();
+
+		return new TokenResult(token, LocalDateTime.ofInstant(exp, ZoneId.of("Asia/Seoul")));
 	}
 
 
