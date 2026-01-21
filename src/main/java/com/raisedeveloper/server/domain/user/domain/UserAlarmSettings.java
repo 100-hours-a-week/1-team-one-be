@@ -33,7 +33,7 @@ public class UserAlarmSettings extends CreatedUpdatedEntity {
 	private User user;
 
 	@Column(nullable = false)
-	private int interval;
+	private int alarmInterval;
 
 	@Column(nullable = false)
 	private LocalTime activeStartAt;
@@ -53,12 +53,11 @@ public class UserAlarmSettings extends CreatedUpdatedEntity {
 	@Column(nullable = false)
 	private boolean dnd;
 
-	@Column(name = "dnd_finished_at")
 	private LocalDateTime dndFinishedAt;
 
 	public UserAlarmSettings(
 		User user,
-		int interval,
+		short interval,
 		LocalTime activeStartAt,
 		LocalTime activeEndAt,
 		LocalTime focusStartAt,
@@ -67,7 +66,7 @@ public class UserAlarmSettings extends CreatedUpdatedEntity {
 		LocalDateTime dndFinishedAt
 	) {
 		this.user = user;
-		this.interval = interval;
+		this.alarmInterval = interval;
 		this.activeStartAt = activeStartAt;
 		this.activeEndAt = activeEndAt;
 		this.focusStartAt = focusStartAt;
@@ -86,7 +85,7 @@ public class UserAlarmSettings extends CreatedUpdatedEntity {
 		String repeatDays,
 		LocalDateTime dndFinishedAt
 	) {
-		this.interval = interval;
+		this.alarmInterval = interval;
 		this.activeStartAt = activeStartAt;
 		this.activeEndAt = activeEndAt;
 		this.focusStartAt = focusStartAt;
