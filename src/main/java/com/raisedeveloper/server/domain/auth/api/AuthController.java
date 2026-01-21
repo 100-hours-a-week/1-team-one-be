@@ -31,4 +31,9 @@ public class AuthController {
 	public ApiResponse<AuthSignUpResponse> signup(@Valid @RequestBody AuthSignUpRequest request) {
 		return ApiResponse.success("AUTH_SIGNUP_SUCCESS", authService.signup(request));
 	}
+
+	@PostMapping("/login")
+	public ApiResponse<AuthLoginResponse> login(@Valid @RequestBody AuthLoginRequest request) {
+		return ApiResponse.success("AUTH_LOGIN_SUCCESS", authService.login(request));
+	}
 }
