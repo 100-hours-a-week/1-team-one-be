@@ -11,6 +11,7 @@ public final class ValidationConstants {
 
 	public static final String NICKNAME_REQUIRED = "닉네임은 필수 값입니다.";
 	public static final String NICKNAME_LENGTH_INVALID = "닉네임은 10자 이내로 입력해주세요.";
+	public static final String NICKNAME_FORMAT_INVALID = "닉네임은 한글/영문만 입력 가능하며 공백 및 특수문자를 사용할 수 없습니다.";
 
 	public static final String IMAGE_PATH_REQUIRED = "이미지 경로는 필수 값입니다.";
 }

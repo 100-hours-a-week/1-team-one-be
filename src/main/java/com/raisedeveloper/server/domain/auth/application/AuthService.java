@@ -1,6 +1,7 @@
 package com.raisedeveloper.server.domain.auth.application;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import com.raisedeveloper.server.domain.user.infra.UserProfileRepository;
 import com.raisedeveloper.server.domain.user.infra.UserRepository;
 import com.raisedeveloper.server.global.exception.CustomException;
 import com.raisedeveloper.server.global.exception.ErrorCode;
+import com.raisedeveloper.server.global.exception.ErrorDetail;
 import com.raisedeveloper.server.global.security.jwt.JwtClaims;
 import com.raisedeveloper.server.global.security.jwt.JwtTokenProvider;
 import com.raisedeveloper.server.global.security.jwt.TokenResult;
@@ -96,6 +98,26 @@ public class AuthService {
 		refreshTokenRepository.save(new RefreshToken(user, newTokenHash, newRefreshToken.expiresAt()));
 
 		return new AuthRefreshResponse(tokens);
+	}
+
+	public boolean isEmailAvailable(String email) {
+		if (userRepository.existsByEmail(email)) {
+			throw new CustomException(
+				ErrorCode.USER_EMAIL_DUPLICATED,
+				List.of(ErrorDetail.field("email", "email already in use"))
+			);
+		}
+		return true;
+	}
+
+	public boolean isNicknameAvailable(String nickname) {
+		if (userProfileRepository.existsByNickname(nickname)) {
+			throw new CustomException(
+				ErrorCode.USER_NICKNAME_DUPLICATED,
+				List.of(ErrorDetail.field("nickname", "nickname already in use"))
+			);
+		}
+		return true;
 	}
 
 	private void validateEmail(String email) {
