@@ -34,6 +34,8 @@ jobs:
       # 4.Gradle 빌드 캐시 (선택적, 더 빠른 빌드)
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3 # 빌드 캐싱
+        with:
+          gradle-version: 8.14.3
 
       # Phase 1: Lint (Checkstyle)
       #- name: Run Checkstyle
