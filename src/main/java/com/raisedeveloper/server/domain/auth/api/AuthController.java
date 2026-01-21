@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -14,6 +15,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.raisedeveloper.server.domain.auth.application.AuthService;
+import com.raisedeveloper.server.domain.auth.dto.AuthFcmRequest;
+import com.raisedeveloper.server.domain.auth.dto.AuthFcmResponse;
 import com.raisedeveloper.server.domain.auth.dto.AuthLoginRequest;
 import com.raisedeveloper.server.domain.auth.dto.AuthLoginResponse;
 import com.raisedeveloper.server.domain.auth.dto.AuthLogoutResponse;
@@ -61,6 +64,13 @@ public class AuthController {
 		Long userId = AuthUtils.resolveUserIdFromContext();
 		authService.logoutAll(userId);
 		return ApiResponse.success("LOGOUT_SUCCESS", new AuthLogoutResponse(true));
+	}
+
+	@PutMapping("/fcm")
+	public ApiResponse<AuthFcmResponse> setFcmToken(@Valid @RequestBody AuthFcmRequest request) {
+		Long userId = AuthUtils.resolveUserIdFromContext();
+		authService.setFcmToken(userId, request.fcmToken());
+		return ApiResponse.success("SET_FCM_TOKEN_SUCCESS", new AuthFcmResponse());
 	}
 
 	@GetMapping("/email-availability")

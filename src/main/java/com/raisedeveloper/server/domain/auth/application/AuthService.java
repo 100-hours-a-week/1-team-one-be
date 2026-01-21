@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.raisedeveloper.server.domain.auth.domain.RefreshToken;
+import com.raisedeveloper.server.domain.auth.domain.FcmToken;
+import com.raisedeveloper.server.domain.auth.infra.FcmTokenRepository;
 import com.raisedeveloper.server.domain.auth.dto.AuthLoginRequest;
 import com.raisedeveloper.server.domain.auth.dto.AuthLoginResponse;
 import com.raisedeveloper.server.domain.auth.dto.AuthRefreshRequest;
@@ -37,6 +39,7 @@ public class AuthService {
 
 	private final UserRepository userRepository;
 	private final RefreshTokenRepository refreshTokenRepository;
+	private final FcmTokenRepository fcmTokenRepository;
 	private final UserProfileRepository userProfileRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final TokenHasher tokenHasher;
@@ -108,6 +111,19 @@ public class AuthService {
 				token.revoke();
 			}
 		}
+	}
+
+	@Transactional
+	public void setFcmToken(Long userId, String fcmToken) {
+		User user = userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
+			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
+		);
+
+		fcmTokenRepository.findFirstByUserIdOrderByCreatedAtDesc(userId)
+			.ifPresentOrElse(
+				existing -> existing.updateToken(fcmToken),
+				() -> fcmTokenRepository.save(new FcmToken(user, fcmToken))
+			);
 	}
 
 	public boolean isEmailAvailable(String email) {
