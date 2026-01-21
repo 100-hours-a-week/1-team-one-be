@@ -7,9 +7,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.raisedeveloper.server.domain.auth.domain.RefreshToken;
 import com.raisedeveloper.server.domain.auth.domain.FcmToken;
-import com.raisedeveloper.server.domain.auth.infra.FcmTokenRepository;
+import com.raisedeveloper.server.domain.auth.domain.RefreshToken;
 import com.raisedeveloper.server.domain.auth.dto.AuthLoginRequest;
 import com.raisedeveloper.server.domain.auth.dto.AuthLoginResponse;
 import com.raisedeveloper.server.domain.auth.dto.AuthRefreshRequest;
@@ -17,6 +16,7 @@ import com.raisedeveloper.server.domain.auth.dto.AuthRefreshResponse;
 import com.raisedeveloper.server.domain.auth.dto.AuthSignUpRequest;
 import com.raisedeveloper.server.domain.auth.dto.AuthSignUpResponse;
 import com.raisedeveloper.server.domain.auth.dto.Tokens;
+import com.raisedeveloper.server.domain.auth.infra.FcmTokenRepository;
 import com.raisedeveloper.server.domain.auth.infra.RefreshTokenRepository;
 import com.raisedeveloper.server.domain.user.domain.User;
 import com.raisedeveloper.server.domain.user.domain.UserProfile;

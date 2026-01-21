@@ -138,8 +138,9 @@ public class GlobalExceptionHandler {
 	}
 
 	private static String extractFieldPath(List<JsonMappingException.Reference> path) {
-		if (path == null || path.isEmpty())
+		if (path == null || path.isEmpty()) {
 			return null;
+		}
 		return path.stream()
 			.map(ref -> ref.getFieldName() != null ? ref.getFieldName() : String.valueOf(ref.getIndex()))
 			.collect(Collectors.joining("."));
