@@ -8,6 +8,9 @@ import lombok.RequiredArgsConstructor;
 public enum ErrorCode {
 
 	// common
+	// [400]
+	USER_NOT_FOUND(404, "NOT_FOUND", "resource not found"),
+	VALIDATION_FAILED(422, "VALIDATION_FAILED", "request validation failed"),
 	// [500]
 	INTERNAL_SERVER_ERROR(500, "INTERNAL_SERVER_ERROR", "Internal server error"),
 
@@ -18,9 +21,18 @@ public enum ErrorCode {
 	MALFORMED_TOKEN(401, "JWT_MALFORMED", "Token is malformed"),
 	UNSUPPORTED_TOKEN(401, "JWT_UNSUPPORTED", "Token type is unsupported"),
 	INVALID_TOKEN(401, "JWT_INVALID", "Token is invalid"),
-	MISSING_TOKEN(401, "JWT_MISSING", "Authorization token is missing");
+	MISSING_TOKEN(401, "JWT_MISSING", "Authorization token is missing"),
+
+	// user domain,
+	AUTH_INVALID_CREDENTIALS(401, "AUTH_INVALID_CREDENTIALS", "invalid email or password"),
+	USER_EMAIL_DUPLICATED(409, "USER_EMAIL_DUPLICATED", "email already in use."),
+	USER_NICKNAME_DUPLICATED(409, "USER_NICKNAME_DUPLICATED", "nickname already in use.");
 
 	private final int httpStatusCode;
 	private final String code;
 	private final String reason;
+
+	public boolean isJwtError() {
+		return code != null && code.startsWith("JWT_");
+	}
 }
