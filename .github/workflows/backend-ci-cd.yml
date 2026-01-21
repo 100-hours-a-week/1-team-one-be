@@ -1,0 +1,267 @@
+name: Backend CI/CD
+
+permissions:
+  contents: write
+  pull-requests: read
+
+on:
+  pull_request:
+    types: [opened, synchronize, closed]
+    branches: [dev, main]
+
+jobs:
+  build-and-test: # PR 대상: Full CI (Lint → Build → Test → Artifact)
+    # closed는 제외 (병합 시에는 CD만 실행)
+    if: github.event.action == 'opened' || github.event.action == 'synchronize'
+    runs-on: ubuntu-latest
+    steps:
+      # 1. 코드 체크아웃
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. JDK 환경 설정 (캐싱 포함)
+      - name: Setup JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+          cache: 'gradle' # 의존성: ~/.gradle/caches, ~/.gradle/wrapper 캐싱
+
+      # 3. Gradle 실행 권한 부여
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # 4.Gradle 빌드 캐시 (선택적, 더 빠른 빌드)
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3 # 빌드 캐싱
+
+      # Phase 1: Lint (Checkstyle)
+      #- name: Run Checkstyle
+      #  run: ./gradlew checkstyleMain checkstyleTest
+      #  continue-on-error: true  # 초기엔 경고만 (점진적 개선)
+
+      # Phase 2: Build
+      - name: Build with Gradle
+        run: ./gradlew build -x test
+
+      # Phase 3: Test (TODO: 테스트 작성 후 활성화)
+      #- name: Run unit tests
+      #  run: ./gradlew test
+
+      # Phase 4: Artifact Upload
+      # plane.jar 생성/저장 안하는 것은 build.gradle에서 설정
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-${{ github.sha }}
+          path: build/libs/*.jar
+          retention-days: 14
+          compression-level: 0  # JAR는 이미 압축됨
+
+      # Discord 알림 추가 (성공/실패 여부 + 커밋 아이디)
+      - name: Notify Discord - CI Result
+        if: always()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          MENTION_USER: ${{ secrets.DISCORD_MENTION_USER_ID }}
+        run: |
+          STATUS="${{ job.status }}"  
+          curl -s -X POST -H "Content-Type: application/json" \
+            -d "{\"content\":\"<@${MENTION_USER}> Backend CI **${STATUS}** | PR #${{ github.event.pull_request.number }} | \`${GITHUB_SHA:0:7}\`\"}" \
+            "$DISCORD_WEBHOOK_URL"
+
+  deploy:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      # 1. 코드 체크아웃 (태깅용)
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Git Tag 생성 위해 전체 히스토리 필요함
+
+      # 2. Artifact Download (변경)
+      - name: Download JAR artifact
+        uses: dawidd6/action-download-artifact@v6
+        # 다른 워크플로우 실행의 Artifact도 다운로드 가능한 커스텀 액션
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          workflow: backend-ci-cd.yml  # Artifact를 생성한 워크플로우 파일명
+          pr: ${{ github.event.pull_request.number }}  # PR 번호로 검색
+          workflow_conclusion: success # 성공한 워크플로우만 검색
+          name_is_regexp: true # Artifact 이름을 정규표현식으로 검색 true는 패턴 매칭 가능
+          name: "backend-.*"
+          path: ./artifacts
+
+      # 3. 타임스탬프로 JAR 파일명 변경
+      - name: Prepare JAR with timestamp
+        run: |
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          cd artifacts
+          cd $(ls -d backend-* | head -n 1)
+          JAR_FILE=$(ls *.jar | head -n 1)   
+          mv $JAR_FILE ../../backend-${TIMESTAMP}.jar
+          cd ../..
+          echo "JAR_FILENAME=backend-${TIMESTAMP}.jar" >> $GITHUB_ENV
+          echo "DEPLOY_TIMESTAMP=$TIMESTAMP" >> $GITHUB_ENV
+
+      # 4. release/ 디렉토리로 JAR 전송
+      - name: Transfer JAR to Server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          source: "backend-${{ env.DEPLOY_TIMESTAMP }}.jar" # 전송할 파일
+          target: "~/backend/release/"
+          strip_components: 0 # 경로에서 제거할 디렉토리 깊이: 지금 이미 파일명만 있음
+          # 0: 원본 경로 그대로 유지
+          # 1: 첫 번째 디렉토리 제거 (artifacts/file.jar → file.jar)
+
+      # 5. 배포 실행 (심볼릭 링크 방식)
+      - name: Deploy via SSH
+        id: deploy
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            BACKEND_DIR="/home/ubuntu/backend"
+            RELEASE_DIR="$BACKEND_DIR/release"
+            NEW_JAR="$RELEASE_DIR/backend-${{ env.DEPLOY_TIMESTAMP }}.jar"
+            CURRENT_LINK="$BACKEND_DIR/backend.jar"
+            
+            echo "1. 서비스 중지"
+            sudo systemctl stop backend || true
+            
+            echo "2. 새 JAR로 심볼릭 링크 생성"
+            ln -sf $NEW_JAR $CURRENT_LINK
+            ls -lh ~/backend/backend.jar 
+            
+            echo "3. 서비스 시작"
+            sudo systemctl start backend
+            
+            echo "4. 서비스 상태 확인"
+            sudo systemctl status backend --no-pager
+            
+            echo "5. 프로세스 시작 대기"
+            sleep 10
+
+      # 6.Health Check
+      - name: Health Check
+        id: healthcheck
+        uses: appleboy/ssh-action@v1.0.0
+        # continue-on-error: true
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            echo "6. Health Check"
+            MAX_RETRY=10
+            RETRY_COUNT=0
+            
+            while [ $RETRY_COUNT -lt $MAX_RETRY ]; do
+              if curl -f -s http://localhost:8080/actuator/health > /dev/null; then
+                echo "Health check passed!"
+                exit 0
+              fi
+            
+              RETRY_COUNT=$((RETRY_COUNT+1))
+              echo "Retry $RETRY_COUNT/$MAX_RETRY..."
+              sleep 5
+            done
+            
+            # fail 시 롤백 + 디스코드 알림 추가 예정
+
+            echo "Health check failed!"
+            echo "=== Application Log ==="
+            tail -30 /home/ubuntu/backend/logs/backend.log || echo "Log not found"
+            echo "=== Error Log ==="
+            tail -30 /home/ubuntu/backend/logs/backend-error.log || echo "Error log not found"
+            exit 1
+
+      # 7. 시맨틱 버전 태그 생성
+      - name: Create Semantic Version Tag
+        if: |
+          steps.healthcheck.outcome == 'success' && github.event.pull_request.base.ref == 'main'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 최신 태그 가져오기 (없으면 v0.0.0)
+          # git describe --tags: 가장 가까운 태그 찾기
+          # --abbrev=0: 커밋 해시 표시 안 함 (태그만)
+          LATEST_TAG=$(git describe --tags --abbrev=0 --match "v*.*.*" 2>/dev/null || echo "v0.0.0")
+          echo "Latest tag: $LATEST_TAG"
+          
+          # 버전 파싱
+          VERSION=${LATEST_TAG#v}
+          MAJOR=$(echo $VERSION | cut -d. -f1)
+          MINOR=$(echo $VERSION | cut -d. -f2)
+          PATCH=$(echo $VERSION | cut -d. -f3)
+          
+          # Patch 버전 자동 증가 (0.0.0 → 0.0.1)
+          # 단 패치버전에 대해서만 가능, 메이저의 경우 수동으로 업데이트가 필요
+          PATCH=$((PATCH + 1))
+          NEW_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+          
+          echo "New version: $NEW_VERSION"
+          
+          # Git 설정 (커밋 작성자 정보)
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # 태그 생성 및 푸시
+          git tag -a $NEW_VERSION -m "Release $NEW_VERSION
+          
+          Deploy Timestamp: ${{ env.DEPLOY_TIMESTAMP }}
+          JAR File: ${{ env.JAR_FILENAME }}
+          Commit: ${{ github.sha }}
+          PR: #${{ github.event.pull_request.number }}
+          Merged by: ${{ github.event.pull_request.user.login }}"
+          
+          git push origin $NEW_VERSION
+          echo "DEPLOY_TAG=$NEW_VERSION" >> $GITHUB_ENV
+          echo "Tag created: $NEW_VERSION"
+
+      # 8. 오래된 release/ 파일 정리 (배포 성공 시)
+      - name: Cleanup Old Releases
+        if: steps.healthcheck.outcome == 'success'
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            RELEASE_DIR="/home/ubuntu/backend/release"
+            
+            echo "Cleanup old releases"
+            
+            # 최근 5개만 유지, 나머지 삭제
+            cd $RELEASE_DIR
+            OLD_JARS=$(ls -t backend-*.jar | tail -n +6)
+            
+            if [ -n "$OLD_JARS" ]; then
+              echo "Removing old releases:"
+              echo "$OLD_JARS" | xargs -r rm -v
+            else
+              echo "No old releases to clean up"
+            fi
+
+      # Discord 알림 추가 (성공/실패 여부 + 커밋 아이디)
+      - name: Notify Discord - CD Result
+        if: always()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          MENTION_USER: ${{ secrets.DISCORD_MENTION_USER_ID }}
+        run: |
+          STATUS="${{ job.status }}"  
+          TAG="${{ env.DEPLOY_TAG }}"
+          curl -s -X POST -H "Content-Type: application/json" \
+            -d "{\"content\":\"<@${MENTION_USER}> Backend CD **${STATUS}** | Tag: ${TAG} | \`${GITHUB_SHA:0:7}\`\"}" \
+            "$DISCORD_WEBHOOK_URL"
