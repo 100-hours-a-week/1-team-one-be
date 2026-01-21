@@ -100,6 +100,16 @@ public class AuthService {
 		return new AuthRefreshResponse(tokens);
 	}
 
+	@Transactional
+	public void logoutAll(Long userId) {
+		List<RefreshToken> tokens = refreshTokenRepository.findAllByUserId(userId);
+		for (RefreshToken token : tokens) {
+			if (token.getRevokedAt() == null) {
+				token.revoke();
+			}
+		}
+	}
+
 	public boolean isEmailAvailable(String email) {
 		if (userRepository.existsByEmail(email)) {
 			throw new CustomException(
