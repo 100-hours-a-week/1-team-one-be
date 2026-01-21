@@ -36,4 +36,9 @@ public class AuthController {
 	public ApiResponse<AuthLoginResponse> login(@Valid @RequestBody AuthLoginRequest request) {
 		return ApiResponse.success("AUTH_LOGIN_SUCCESS", authService.login(request));
 	}
+
+	@PostMapping("/refresh")
+	public ApiResponse<AuthRefreshResponse> refresh(@Valid @RequestBody AuthRefreshRequest request) {
+		return ApiResponse.success("AUTH_REFRESH_SUCCESS", authService.refresh(request));
+	}
 }

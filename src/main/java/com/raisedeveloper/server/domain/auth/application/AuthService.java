@@ -1,5 +1,7 @@
 package com.raisedeveloper.server.domain.auth.application;
 
+import java.time.LocalDateTime;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -7,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.raisedeveloper.server.domain.auth.domain.RefreshToken;
 import com.raisedeveloper.server.domain.auth.dto.AuthLoginRequest;
 import com.raisedeveloper.server.domain.auth.dto.AuthLoginResponse;
+import com.raisedeveloper.server.domain.auth.dto.AuthRefreshRequest;
+import com.raisedeveloper.server.domain.auth.dto.AuthRefreshResponse;
 import com.raisedeveloper.server.domain.auth.dto.AuthSignUpRequest;
 import com.raisedeveloper.server.domain.auth.dto.AuthSignUpResponse;
 import com.raisedeveloper.server.domain.auth.dto.Tokens;
@@ -68,6 +72,32 @@ public class AuthService {
 		return AuthLoginResponse.from(tokens, user);
 	}
 
+	@Transactional
+	public AuthRefreshResponse refresh(AuthRefreshRequest request) {
+		jwtTokenProvider.validate(request.refreshToken());
+
+		JwtClaims jwtClaims = jwtTokenProvider.extractClaims(request.refreshToken());
+		if (jwtClaims.tokenType() != TokenType.REFRESH) {
+			throw new CustomException(ErrorCode.INVALID_TOKEN);
+		}
+
+		String tokenHash = tokenHasher.hmacSha256Base64Url(request.refreshToken());
+		RefreshToken refreshToken = refreshTokenRepository.findByTokenHash(tokenHash).orElseThrow(
+			() -> new CustomException(ErrorCode.INVALID_TOKEN));
+		validateRefreshTokenState(refreshToken);
+		refreshToken.revoke();
+
+		User user = userRepository.findByEmailAndDeletedAtIsNull(jwtClaims.email()).orElseThrow(
+			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
+		);
+		Tokens tokens = issueTokens(user);
+		TokenResult newRefreshToken = tokens.refreshToken();
+		String newTokenHash = tokenHasher.hmacSha256Base64Url(newRefreshToken.token());
+		refreshTokenRepository.save(new RefreshToken(user, newTokenHash, newRefreshToken.expiresAt()));
+
+		return new AuthRefreshResponse(tokens);
+	}
+
 	private void validateEmail(String email) {
 		if (userRepository.existsByEmail(email)) {
 			throw new CustomException(ErrorCode.USER_EMAIL_DUPLICATED);
@@ -87,5 +117,14 @@ public class AuthService {
 			new JwtClaims(user.getId(), user.getEmail(), user.getRole(), TokenType.REFRESH));
 
 		return new Tokens(accessToken, refreshToken);
+	}
+
+	private void validateRefreshTokenState(RefreshToken refreshToken) {
+		if (refreshToken.getRevokedAt() != null) {
+			throw new CustomException(ErrorCode.INVALID_TOKEN);
+		}
+		if (refreshToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+			throw new CustomException(ErrorCode.EXPIRED_TOKEN);
+		}
 	}
 }
