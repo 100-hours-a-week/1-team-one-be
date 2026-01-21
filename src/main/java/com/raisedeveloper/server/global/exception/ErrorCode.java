@@ -23,4 +23,8 @@ public enum ErrorCode {
 	private final int httpStatusCode;
 	private final String code;
 	private final String reason;
+
+	public boolean isJwtError() {
+		return code != null && code.startsWith("JWT_");
+	}
 }
