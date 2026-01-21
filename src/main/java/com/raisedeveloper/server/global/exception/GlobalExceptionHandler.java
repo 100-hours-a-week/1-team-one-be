@@ -1,14 +1,20 @@
 package com.raisedeveloper.server.global.exception;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.raisedeveloper.server.global.response.ApiResponse;
 
 import jakarta.validation.ConstraintViolation;
@@ -26,6 +32,53 @@ public class GlobalExceptionHandler {
 
 		return ResponseEntity.status(errorCode.getHttpStatusCode())
 			.body(ApiResponse.fail(errorCode.getCode(), errors));
+	}
+
+	@ExceptionHandler(HttpMessageNotReadableException.class)
+	public ResponseEntity<ApiResponse<Void>> handleNotReadable(HttpMessageNotReadableException ex) {
+		Throwable cause = getDeepestCause(ex);
+
+		if (cause instanceof InvalidFormatException ife) {
+
+			String field = extractFieldPath(ife.getPath());
+			Class<?> targetClass = extractRawClass(ife.getTargetType());
+
+			if (targetClass != null && targetClass.isEnum()) {
+				@SuppressWarnings("unchecked")
+				Class<? extends Enum<?>> enumClass = (Class<? extends Enum<?>>)targetClass;
+
+				List<ErrorDetail> errors = List.of(toEnumError(field, enumClass));
+				ErrorCode errorCode = ErrorCode.VALIDATION_FAILED;
+				return ResponseEntity.status(errorCode.getHttpStatusCode())
+					.body(ApiResponse.fail(errorCode.getCode(), errors));
+			}
+		}
+
+		ErrorCode errorCode = ErrorCode.VALIDATION_FAILED;
+		return ResponseEntity.status(errorCode.getHttpStatusCode())
+			.body(ApiResponse.fail(
+				errorCode.getCode(),
+				List.of(ErrorDetail.reasonOnly(errorCode.getReason()))
+			));
+	}
+
+	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
+	public ResponseEntity<ApiResponse<Void>> handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException ex) {
+		Class<?> targetType = ex.getRequiredType();
+		if (targetType != null && targetType.isEnum()) {
+			@SuppressWarnings("unchecked")
+			Class<? extends Enum<?>> enumClass = (Class<? extends Enum<?>>)targetType;
+			String field = ex.getName();
+			ErrorCode errorCode = ErrorCode.VALIDATION_FAILED;
+			return ResponseEntity.status(errorCode.getHttpStatusCode())
+				.body(ApiResponse.fail(errorCode.getCode(), List.of(toEnumError(field, enumClass))));
+		}
+		ErrorCode errorCode = ErrorCode.VALIDATION_FAILED;
+		return ResponseEntity.status(errorCode.getHttpStatusCode())
+			.body(ApiResponse.fail(
+				errorCode.getCode(),
+				List.of(ErrorDetail.reasonOnly(errorCode.getReason()))
+			));
 	}
 
 	@ExceptionHandler(BindException.class)
@@ -82,5 +135,33 @@ public class GlobalExceptionHandler {
 		}
 		int lastDot = path.lastIndexOf('.');
 		return lastDot == -1 ? path : path.substring(lastDot + 1);
+	}
+
+	private static String extractFieldPath(List<JsonMappingException.Reference> path) {
+		if (path == null || path.isEmpty())
+			return null;
+		return path.stream()
+			.map(ref -> ref.getFieldName() != null ? ref.getFieldName() : String.valueOf(ref.getIndex()))
+			.collect(Collectors.joining("."));
+	}
+
+	private static Class<?> extractRawClass(Class<?> targetType) {
+		return targetType;
+	}
+
+	private ErrorDetail toEnumError(String field, Class<? extends Enum<?>> enumClass) {
+		String allowed = Arrays.stream(enumClass.getEnumConstants())
+			.map(Enum::name)
+			.collect(Collectors.joining(", ", "(", ")"));
+		String reason = (field == null ? "value" : field) + " must be " + allowed;
+		return ErrorDetail.field(field, reason);
+	}
+
+	private Throwable getDeepestCause(Throwable ex) {
+		Throwable cause = ex;
+		while (cause.getCause() != null && cause.getCause() != cause) {
+			cause = cause.getCause();
+		}
+		return cause;
 	}
 }
