@@ -1,12 +1,15 @@
 package com.raisedeveloper.server.domain.auth.application;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.raisedeveloper.server.domain.auth.domain.RefreshToken;
+import com.raisedeveloper.server.domain.auth.domain.FcmToken;
+import com.raisedeveloper.server.domain.auth.infra.FcmTokenRepository;
 import com.raisedeveloper.server.domain.auth.dto.AuthLoginRequest;
 import com.raisedeveloper.server.domain.auth.dto.AuthLoginResponse;
 import com.raisedeveloper.server.domain.auth.dto.AuthRefreshRequest;
@@ -21,6 +24,7 @@ import com.raisedeveloper.server.domain.user.infra.UserProfileRepository;
 import com.raisedeveloper.server.domain.user.infra.UserRepository;
 import com.raisedeveloper.server.global.exception.CustomException;
 import com.raisedeveloper.server.global.exception.ErrorCode;
+import com.raisedeveloper.server.global.exception.ErrorDetail;
 import com.raisedeveloper.server.global.security.jwt.JwtClaims;
 import com.raisedeveloper.server.global.security.jwt.JwtTokenProvider;
 import com.raisedeveloper.server.global.security.jwt.TokenResult;
@@ -35,6 +39,7 @@ public class AuthService {
 
 	private final UserRepository userRepository;
 	private final RefreshTokenRepository refreshTokenRepository;
+	private final FcmTokenRepository fcmTokenRepository;
 	private final UserProfileRepository userProfileRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final TokenHasher tokenHasher;
@@ -96,6 +101,49 @@ public class AuthService {
 		refreshTokenRepository.save(new RefreshToken(user, newTokenHash, newRefreshToken.expiresAt()));
 
 		return new AuthRefreshResponse(tokens);
+	}
+
+	@Transactional
+	public void logoutAll(Long userId) {
+		List<RefreshToken> tokens = refreshTokenRepository.findAllByUserId(userId);
+		for (RefreshToken token : tokens) {
+			if (token.getRevokedAt() == null) {
+				token.revoke();
+			}
+		}
+	}
+
+	@Transactional
+	public void setFcmToken(Long userId, String fcmToken) {
+		User user = userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
+			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
+		);
+
+		fcmTokenRepository.findFirstByUserIdOrderByCreatedAtDesc(userId)
+			.ifPresentOrElse(
+				existing -> existing.updateToken(fcmToken),
+				() -> fcmTokenRepository.save(new FcmToken(user, fcmToken))
+			);
+	}
+
+	public boolean isEmailAvailable(String email) {
+		if (userRepository.existsByEmail(email)) {
+			throw new CustomException(
+				ErrorCode.USER_EMAIL_DUPLICATED,
+				List.of(ErrorDetail.field("email", "email already in use"))
+			);
+		}
+		return true;
+	}
+
+	public boolean isNicknameAvailable(String nickname) {
+		if (userProfileRepository.existsByNickname(nickname)) {
+			throw new CustomException(
+				ErrorCode.USER_NICKNAME_DUPLICATED,
+				List.of(ErrorDetail.field("nickname", "nickname already in use"))
+			);
+		}
+		return true;
 	}
 
 	private void validateEmail(String email) {
