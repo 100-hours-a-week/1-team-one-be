@@ -28,7 +28,8 @@ public enum ErrorCode {
 	AUTH_INVALID_CREDENTIALS(401, "AUTH_INVALID_CREDENTIALS", "invalid email or password"),
 	USER_EMAIL_DUPLICATED(409, "USER_EMAIL_DUPLICATED", "email already in use."),
 	USER_NICKNAME_DUPLICATED(409, "USER_NICKNAME_DUPLICATED", "nickname already in use."),
-	CHARACTER_ALREADY_SET(409, "CHARACTER_ALREADY_SET", "character type is already selected.");
+	CHARACTER_ALREADY_SET(409, "CHARACTER_ALREADY_SET", "character type is already selected."),
+	ALARM_SETTING_NOT_FOUND(404, "ALARM_SETTING_NOT_FOUND", "alarm setting data not found");
 
 	private final int httpStatusCode;
 	private final String code;
