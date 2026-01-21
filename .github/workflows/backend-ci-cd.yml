@@ -58,17 +58,47 @@ jobs:
           retention-days: 14
           compression-level: 0  # JAR는 이미 압축됨
 
-      # Discord 알림 추가 (성공/실패 여부 + 커밋 아이디)
-      - name: Notify Discord - CI Result
-        if: always()
+      # Phase 5: Discord 성공 알림
+      - name: Discord Notification - Success
+        if: success()
         env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          MENTION_USER: ${{ secrets.DISCORD_MENTION_USER_ID }}
-        run: |
-          STATUS="${{ job.status }}"  
-          curl -s -X POST -H "Content-Type: application/json" \
-            -d "{\"content\":\"<@${MENTION_USER}> Backend CI **${STATUS}** | PR #${{ github.event.pull_request.number }} | \`${GITHUB_SHA:0:7}\`\"}" \
-            "$DISCORD_WEBHOOK_URL"
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_EMBEDS: |
+            [{
+              "title": "✅ BE CI 성공",
+              "color": 5763719,
+              "fields": [
+                {"name": "Repository", "value": "`${{ github.repository }}`", "inline": true},
+                {"name": "Merge Flow", "value": "`${{ github.head_ref }}` to `${{ github.base_ref }}`", "inline": true},
+                {"name": "PR Title", "value": "${{ github.event.pull_request.title }}", "inline": false},
+                {"name": "View", "value": "[Link to Action](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})", "inline": true}
+              ]
+            }]
+        uses: Ilshidur/action-discord@0.4.0
+        with:
+          args: 'CI 파이프라인이 성공적으로 완료되었습니다. <@${{ secrets.DISCORD_MENTION_USER_ID }}>'
+
+      # Phase 5: Discord 실패 알림
+      - name: Discord Notification - Failure
+        if: failure()
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_EMBEDS: |
+            [{
+              "title": "🚨 BE CI 실패",
+              "color": 15548997,
+              "fields": [
+                {"name": "Repository", "value": "`${{ github.repository }}`", "inline": true},
+                {"name": "Merge Flow", "value": "`${{ github.head_ref }}` to `${{ github.base_ref }}`", "inline": true},
+                {"name": "Commit/PR", "value": "${{ github.event.pull_request.title }}", "inline": false},
+                {"name": "View", "value": "[Link to Action](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})", "inline": true}
+              ]
+            }]
+        uses: Ilshidur/action-discord@0.4.0
+        with:
+          args: 'CI 파이프라인 실행 중 오류가 발생했습니다. 로그를 확인해주세요. <@${{ secrets.DISCORD_MENTION_USER_ID }}>'
+
+
 
   deploy:
     if: github.event.pull_request.merged == true
@@ -253,15 +283,42 @@ jobs:
               echo "No old releases to clean up"
             fi
 
-      # Discord 알림 추가 (성공/실패 여부 + 커밋 아이디)
-      - name: Notify Discord - CD Result
-        if: always()
+      # 9. Discord 성공 알림
+      - name: Discord Notification - Success
+        if: success()
         env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          MENTION_USER: ${{ secrets.DISCORD_MENTION_USER_ID }}
-        run: |
-          STATUS="${{ job.status }}"  
-          TAG="${{ env.DEPLOY_TAG }}"
-          curl -s -X POST -H "Content-Type: application/json" \
-            -d "{\"content\":\"<@${MENTION_USER}> Backend CD **${STATUS}** | Tag: ${TAG} | \`${GITHUB_SHA:0:7}\`\"}" \
-            "$DISCORD_WEBHOOK_URL"
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_EMBEDS: |
+            [{
+              "title": "✅ BE CD 성공", 
+              "color": 5763719,
+              "fields": [
+                {"name": "Repository", "value": "`${{ github.repository }}`", "inline": true},
+                {"name": "Merge Flow", "value": "`${{ github.head_ref }}` to `${{ github.base_ref }}`", "inline": true},
+                {"name": "Commit/PR", "value": "${{ github.event.pull_request.title }}", "inline": false},
+                {"name": "View", "value": "[Link to Action](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})", "inline": true}
+              ]
+            }]
+        uses: Ilshidur/action-discord@0.4.0
+        with:
+          args: 'CD 파이프라인이 성공적으로 완료되었습니다. <@${{ secrets.DISCORD_MENTION_USER_ID }}>'
+
+      # 10. Discord 실패 알림
+      - name: Discord Notification - Failure
+        if: failure()
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_EMBEDS: |
+            [{
+              "title": "🚨 BE CD 실패",
+              "color": 15548997,
+              "fields": [
+                {"name": "Repository", "value": "`${{ github.repository }}`", "inline": true},
+                {"name": "Merge Flow", "value": "`${{ github.head_ref }}` to `${{ github.base_ref }}`", "inline": true},
+                {"name": "Commit/PR", "value": "${{ github.event.pull_request.title }}", "inline": false},
+                {"name": "View", "value": "[Link to Action](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})", "inline": true}
+              ]
+            }]
+        uses: Ilshidur/action-discord@0.4.0
+        with:
+          args: 'CD 파이프라인 실행 중 오류가 발생했습니다. 로그를 확인해주세요. <@${{ secrets.DISCORD_MENTION_USER_ID }}>'
