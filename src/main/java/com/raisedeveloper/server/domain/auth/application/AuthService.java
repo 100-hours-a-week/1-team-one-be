@@ -68,6 +68,7 @@ public class AuthService {
 			throw new CustomException(ErrorCode.AUTH_INVALID_CREDENTIALS);
 		}
 
+		logoutAll(user.getId());
 		Tokens tokens = issueTokens(user);
 
 		TokenResult refreshToken = tokens.refreshToken();
