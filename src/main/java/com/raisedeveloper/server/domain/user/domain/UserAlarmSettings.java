@@ -33,7 +33,7 @@ public class UserAlarmSettings extends CreatedUpdatedEntity {
 	private User user;
 
 	@Column(nullable = false)
-	private int alarmInterval;
+	private short alarmInterval;
 
 	@Column(nullable = false)
 	private LocalTime activeStartAt;
@@ -77,7 +77,7 @@ public class UserAlarmSettings extends CreatedUpdatedEntity {
 	}
 
 	public void updateSettings(
-		int interval,
+		short interval,
 		LocalTime activeStartAt,
 		LocalTime activeEndAt,
 		LocalTime focusStartAt,
