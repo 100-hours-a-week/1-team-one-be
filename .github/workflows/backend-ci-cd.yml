@@ -212,7 +212,7 @@ jobs:
             RETRY_COUNT=0
             
             while [ $RETRY_COUNT -lt $MAX_RETRY ]; do
-              if curl -f -s http://localhost:8080/actuator/health > /dev/null; then
+              if curl -f -s http://localhost:8080/api/actuator/health > /dev/null; then
                 echo "Health check passed!"
                 exit 0
               fi
