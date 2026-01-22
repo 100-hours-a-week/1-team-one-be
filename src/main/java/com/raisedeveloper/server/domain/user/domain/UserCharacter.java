@@ -40,7 +40,7 @@ public class UserCharacter extends CreatedUpdatedEntity {
 	private String name;
 
 	@Column(nullable = false)
-	private int level;
+	private short level;
 
 	@Column(nullable = false)
 	private int exp;
