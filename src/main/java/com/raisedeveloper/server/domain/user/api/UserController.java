@@ -4,6 +4,7 @@ import java.util.Map;
 
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,8 +17,11 @@ import com.raisedeveloper.server.domain.user.dto.AlarmSettingsRequest;
 import com.raisedeveloper.server.domain.user.dto.CharacterCreateRequest;
 import com.raisedeveloper.server.domain.user.dto.CharacterCreateResponse;
 import com.raisedeveloper.server.domain.user.dto.OnboardingResponse;
+import com.raisedeveloper.server.domain.user.dto.ProfileImageUpdateRequest;
+import com.raisedeveloper.server.domain.user.dto.ProfileNicknameUpdateRequest;
 import com.raisedeveloper.server.domain.user.dto.UserMeAlarmSettingsResponse;
 import com.raisedeveloper.server.domain.user.dto.UserMeResponse;
+import com.raisedeveloper.server.domain.user.dto.UserProfileResponse;
 import com.raisedeveloper.server.global.response.ApiResponse;
 import com.raisedeveloper.server.global.security.utils.AuthUtils;
 
@@ -56,6 +60,24 @@ public class UserController {
 		Long userId = AuthUtils.resolveUserIdFromContext();
 		userService.markOnboardingCompleted(userId);
 		return ApiResponse.success("GET_ONBOARDING_COMPLETED", Map.of());
+	}
+
+	@PatchMapping("/me/profile/image")
+	public ApiResponse<UserProfileResponse> updateProfileImage(
+		@Valid @RequestBody ProfileImageUpdateRequest request
+	) {
+		Long userId = AuthUtils.resolveUserIdFromContext();
+		UserProfileResponse response = userService.updateProfileImage(userId, request.imagePath());
+		return ApiResponse.success("UPDATE_PROFILE_IMAGE_SUCCESS", response);
+	}
+
+	@PatchMapping("/me/profile/nickname")
+	public ApiResponse<UserProfileResponse> updateNickname(
+		@Valid @RequestBody ProfileNicknameUpdateRequest request
+	) {
+		Long userId = AuthUtils.resolveUserIdFromContext();
+		UserProfileResponse response = userService.updateNickname(userId, request.nickname());
+		return ApiResponse.success("UPDATE_NICKNAME_SUCCESS", response);
 	}
 
 	@GetMapping("/me/alarm-settings")
