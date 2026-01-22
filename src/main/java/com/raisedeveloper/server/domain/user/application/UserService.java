@@ -54,6 +54,20 @@ public class UserService {
 	}
 
 	@Transactional
+	public UserMeResponse getUserProfile(Long userId) {
+		User user = userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
+			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
+		);
+		UserProfile profile = userProfileRepository.findByUserId(userId).orElseThrow(
+			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
+		);
+		UserCharacter character = userCharacterRepository.findByUserId(userId).orElseThrow(
+			() -> new CustomException(ErrorCode.CHARACTER_NOT_SET)
+		);
+		return UserMeResponse.from(user, profile, character);
+	}
+
+	@Transactional
 	public UserProfileResponse updateProfileImage(Long userId, String imagePath) {
 		User user = userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
 			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
