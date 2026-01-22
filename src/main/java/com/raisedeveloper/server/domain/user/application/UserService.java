@@ -14,6 +14,7 @@ import com.raisedeveloper.server.domain.user.dto.AlarmSettingsDndRequest;
 import com.raisedeveloper.server.domain.user.dto.AlarmSettingsRequest;
 import com.raisedeveloper.server.domain.user.dto.CharacterCreateRequest;
 import com.raisedeveloper.server.domain.user.dto.CharacterCreateResponse;
+import com.raisedeveloper.server.domain.user.dto.OnboardingResponse;
 import com.raisedeveloper.server.domain.user.dto.UserMeAlarmSettingsResponse;
 import com.raisedeveloper.server.domain.user.dto.UserMeResponse;
 import com.raisedeveloper.server.domain.user.infra.UserAlarmSettingsRepository;
@@ -129,5 +130,22 @@ public class UserService {
 
 		UserCharacter character = userCharacterRepository.save(new UserCharacter(user, request.type()));
 		return new CharacterCreateResponse(character.getId());
+	}
+
+	public OnboardingResponse checkUserOnboardingCompleted(Long userId) {
+		User user = userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
+			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
+		);
+
+		return new OnboardingResponse(user.isOnboardingCompleted());
+	}
+
+	@Transactional
+	public void markOnboardingCompleted(Long userId) {
+		User user = userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
+			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
+		);
+
+		user.onboardingCompleted();
 	}
 }

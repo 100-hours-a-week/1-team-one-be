@@ -15,6 +15,7 @@ import com.raisedeveloper.server.domain.user.dto.AlarmSettingsDndRequest;
 import com.raisedeveloper.server.domain.user.dto.AlarmSettingsRequest;
 import com.raisedeveloper.server.domain.user.dto.CharacterCreateRequest;
 import com.raisedeveloper.server.domain.user.dto.CharacterCreateResponse;
+import com.raisedeveloper.server.domain.user.dto.OnboardingResponse;
 import com.raisedeveloper.server.domain.user.dto.UserMeAlarmSettingsResponse;
 import com.raisedeveloper.server.domain.user.dto.UserMeResponse;
 import com.raisedeveloper.server.global.response.ApiResponse;
@@ -41,6 +42,20 @@ public class UserController {
 		Long userId = AuthUtils.resolveUserIdFromContext();
 		userService.withdraw(userId);
 		return ApiResponse.success("WITHDRAWAL_SUCCESS", Map.of());
+	}
+
+	@GetMapping("/me/onboarding-completed")
+	public ApiResponse<OnboardingResponse> getOnboardingCompleted() {
+		Long userId = AuthUtils.resolveUserIdFromContext();
+		OnboardingResponse res = userService.checkUserOnboardingCompleted(userId);
+		return ApiResponse.success("GET_ONBOARDING_COMPLETED", res);
+	}
+
+	@PostMapping("/me/onboarding-completed")
+	public ApiResponse<Object> markOnboardingCompleted() {
+		Long userId = AuthUtils.resolveUserIdFromContext();
+		userService.markOnboardingCompleted(userId);
+		return ApiResponse.success("GET_ONBOARDING_COMPLETED", Map.of());
 	}
 
 	@GetMapping("/me/alarm-settings")
