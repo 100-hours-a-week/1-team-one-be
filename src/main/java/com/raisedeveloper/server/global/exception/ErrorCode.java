@@ -9,6 +9,7 @@ public enum ErrorCode {
 
 	// common
 	// [400]
+	INVALID_JSON(400, "INVALID_JSON", "json format is invalid"),
 	USER_NOT_FOUND(404, "NOT_FOUND", "resource not found"),
 	VALIDATION_FAILED(422, "VALIDATION_FAILED", "request validation failed"),
 	// [500]
@@ -26,7 +27,9 @@ public enum ErrorCode {
 	// user domain,
 	AUTH_INVALID_CREDENTIALS(401, "AUTH_INVALID_CREDENTIALS", "invalid email or password"),
 	USER_EMAIL_DUPLICATED(409, "USER_EMAIL_DUPLICATED", "email already in use."),
-	USER_NICKNAME_DUPLICATED(409, "USER_NICKNAME_DUPLICATED", "nickname already in use.");
+	USER_NICKNAME_DUPLICATED(409, "USER_NICKNAME_DUPLICATED", "nickname already in use."),
+	CHARACTER_ALREADY_SET(409, "CHARACTER_ALREADY_SET", "character type is already selected."),
+	ALARM_SETTING_NOT_FOUND(404, "ALARM_SETTING_NOT_FOUND", "alarm setting data not found");
 
 	private final int httpStatusCode;
 	private final String code;
