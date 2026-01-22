@@ -6,13 +6,16 @@ import org.springframework.transaction.annotation.Transactional;
 import com.raisedeveloper.server.domain.user.domain.User;
 import com.raisedeveloper.server.domain.user.domain.UserAlarmSettings;
 import com.raisedeveloper.server.domain.user.domain.UserCharacter;
+import com.raisedeveloper.server.domain.user.domain.UserProfile;
 import com.raisedeveloper.server.domain.user.dto.AlarmSettingsDndRequest;
 import com.raisedeveloper.server.domain.user.dto.AlarmSettingsRequest;
 import com.raisedeveloper.server.domain.user.dto.CharacterCreateRequest;
 import com.raisedeveloper.server.domain.user.dto.CharacterCreateResponse;
 import com.raisedeveloper.server.domain.user.dto.UserMeAlarmSettingsResponse;
+import com.raisedeveloper.server.domain.user.dto.UserMeResponse;
 import com.raisedeveloper.server.domain.user.infra.UserAlarmSettingsRepository;
 import com.raisedeveloper.server.domain.user.infra.UserCharacterRepository;
+import com.raisedeveloper.server.domain.user.infra.UserProfileRepository;
 import com.raisedeveloper.server.domain.user.infra.UserRepository;
 import com.raisedeveloper.server.global.exception.CustomException;
 import com.raisedeveloper.server.global.exception.ErrorCode;
@@ -27,6 +30,21 @@ public class UserService {
 	private final UserRepository userRepository;
 	private final UserAlarmSettingsRepository userAlarmSettingsRepository;
 	private final UserCharacterRepository userCharacterRepository;
+	private final UserProfileRepository userProfileRepository;
+
+	@Transactional
+	public UserMeResponse getMe(Long userId) {
+		User user = userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
+			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
+		);
+		UserProfile profile = userProfileRepository.findByUserId(userId).orElseThrow(
+			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
+		);
+		UserCharacter character = userCharacterRepository.findByUserId(userId).orElseThrow(
+			() -> new CustomException(ErrorCode.CHARACTER_NOT_SET)
+		);
+		return UserMeResponse.from(user, profile, character);
+	}
 
 	@Transactional
 	public UserMeAlarmSettingsResponse getAlarmSettings(Long userId) {

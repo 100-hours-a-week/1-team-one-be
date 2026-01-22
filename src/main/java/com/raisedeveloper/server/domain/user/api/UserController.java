@@ -15,6 +15,7 @@ import com.raisedeveloper.server.domain.user.dto.AlarmSettingsRequest;
 import com.raisedeveloper.server.domain.user.dto.CharacterCreateRequest;
 import com.raisedeveloper.server.domain.user.dto.CharacterCreateResponse;
 import com.raisedeveloper.server.domain.user.dto.UserMeAlarmSettingsResponse;
+import com.raisedeveloper.server.domain.user.dto.UserMeResponse;
 import com.raisedeveloper.server.global.response.ApiResponse;
 import com.raisedeveloper.server.global.security.utils.AuthUtils;
 
@@ -27,6 +28,12 @@ import lombok.RequiredArgsConstructor;
 public class UserController {
 
 	private final UserService userService;
+
+	@GetMapping("/me")
+	public ApiResponse<UserMeResponse> getMe() {
+		Long userId = AuthUtils.resolveUserIdFromContext();
+		return ApiResponse.success("GET_ME_SUCCESS", userService.getMe(userId));
+	}
 
 	@GetMapping("/me/alarm-settings")
 	public ApiResponse<UserMeAlarmSettingsResponse> getAlarmSettings() {
