@@ -1,8 +1,11 @@
 package com.raisedeveloper.server.domain.user.application;
 
+import java.time.LocalDateTime;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.raisedeveloper.server.domain.auth.application.AuthService;
 import com.raisedeveloper.server.domain.user.domain.User;
 import com.raisedeveloper.server.domain.user.domain.UserAlarmSettings;
 import com.raisedeveloper.server.domain.user.domain.UserCharacter;
@@ -27,6 +30,7 @@ import lombok.RequiredArgsConstructor;
 @Transactional(readOnly = true)
 public class UserService {
 
+	private final AuthService authService;
 	private final UserRepository userRepository;
 	private final UserAlarmSettingsRepository userAlarmSettingsRepository;
 	private final UserCharacterRepository userCharacterRepository;
@@ -44,6 +48,15 @@ public class UserService {
 			() -> new CustomException(ErrorCode.CHARACTER_NOT_SET)
 		);
 		return UserMeResponse.from(user, profile, character);
+	}
+
+	@Transactional
+	public void withdraw(Long userId) {
+		User user = userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
+			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
+		);
+		user.softDelete(LocalDateTime.now());
+		authService.logoutAll(userId);
 	}
 
 	@Transactional

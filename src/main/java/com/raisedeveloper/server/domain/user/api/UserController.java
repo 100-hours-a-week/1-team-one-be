@@ -2,6 +2,7 @@ package com.raisedeveloper.server.domain.user.api;
 
 import java.util.Map;
 
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -33,6 +34,13 @@ public class UserController {
 	public ApiResponse<UserMeResponse> getMe() {
 		Long userId = AuthUtils.resolveUserIdFromContext();
 		return ApiResponse.success("GET_ME_SUCCESS", userService.getMe(userId));
+	}
+
+	@DeleteMapping("/me")
+	public ApiResponse<Object> withdraw() {
+		Long userId = AuthUtils.resolveUserIdFromContext();
+		userService.withdraw(userId);
+		return ApiResponse.success("WITHDRAWAL_SUCCESS", Map.of());
 	}
 
 	@GetMapping("/me/alarm-settings")
