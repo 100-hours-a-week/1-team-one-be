@@ -36,7 +36,10 @@ public enum ErrorCode {
 	CHARACTER_NOT_SET(409, "CHARACTER_NOT_FOUND", "character is not set"),
 	USER_EMAIL_DUPLICATED(409, "USER_EMAIL_DUPLICATED", "email already in use."),
 	USER_NICKNAME_DUPLICATED(409, "USER_NICKNAME_DUPLICATED", "nickname already in use."),
-	CHARACTER_ALREADY_SET(409, "CHARACTER_ALREADY_SET", "character type is already selected.");
+	CHARACTER_ALREADY_SET(409, "CHARACTER_ALREADY_SET", "character type is already selected."),
+
+	// survey domain
+	SURVEY_NOT_FOUND(404, "SURVEY_NOT_FOUND", "survey not found");
 
 	private final int httpStatusCode;
 	private final String code;
