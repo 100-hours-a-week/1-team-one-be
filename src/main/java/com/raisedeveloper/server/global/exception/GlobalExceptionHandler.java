@@ -9,6 +9,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -97,6 +98,16 @@ public class GlobalExceptionHandler {
 			.toList();
 		return ResponseEntity.status(errorCode.getHttpStatusCode())
 			.body(ApiResponse.fail(errorCode.getCode(), errors));
+	}
+
+	@ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+	public ResponseEntity<ApiResponse<Void>> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+		ErrorCode errorCode = ErrorCode.METHOD_NOT_ALLOWED;
+		return ResponseEntity.status(errorCode.getHttpStatusCode())
+			.body(ApiResponse.fail(
+				errorCode.getCode(),
+				List.of(ErrorDetail.reasonOnly(errorCode.getReason()))
+			));
 	}
 
 	@ExceptionHandler(Exception.class)

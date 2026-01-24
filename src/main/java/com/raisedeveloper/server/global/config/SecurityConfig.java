@@ -18,6 +18,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.raisedeveloper.server.global.security.jwt.JwtAuthenticationFilter;
+import com.raisedeveloper.server.global.security.jwt.JwtAccessDeniedHandler;
+import com.raisedeveloper.server.global.security.jwt.JwtAuthenticationEntryPoint;
 import com.raisedeveloper.server.global.security.jwt.JwtExceptionFilter;
 import com.raisedeveloper.server.global.security.jwt.JwtTokenProvider;
 
@@ -44,6 +46,10 @@ public class SecurityConfig {
 			.csrf(AbstractHttpConfigurer::disable)
 			.cors(Customizer.withDefaults())
 			.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+			.exceptionHandling(eh -> eh
+				.authenticationEntryPoint(new JwtAuthenticationEntryPoint(objectMapper))
+				.accessDeniedHandler(new JwtAccessDeniedHandler(objectMapper))
+			)
 
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers(new RegexRequestMatcher("^/users/\\d+$", "GET")).permitAll()

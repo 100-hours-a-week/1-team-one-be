@@ -4,54 +4,46 @@ import java.io.IOException;
 import java.util.List;
 
 import org.springframework.http.MediaType;
-import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.web.access.AccessDeniedHandler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.raisedeveloper.server.global.exception.CustomException;
 import com.raisedeveloper.server.global.exception.ErrorCode;
 import com.raisedeveloper.server.global.exception.ErrorDetail;
 import com.raisedeveloper.server.global.response.ApiResponse;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-public class JwtExceptionFilter extends OncePerRequestFilter {
+public class JwtAccessDeniedHandler implements AccessDeniedHandler {
 
 	private final ObjectMapper objectMapper;
 
-	public JwtExceptionFilter(ObjectMapper objectMapper) {
+	public JwtAccessDeniedHandler(ObjectMapper objectMapper) {
 		this.objectMapper = objectMapper;
 	}
 
 	@Override
-	protected void doFilterInternal(
+	public void handle(
 		HttpServletRequest request,
 		HttpServletResponse response,
-		FilterChain filterChain
-	) throws ServletException, IOException {
-
-		try {
-			filterChain.doFilter(request, response);
-		} catch (CustomException ex) {
-			ErrorCode ec = ex.getErrorCode();
-			if (ec != null && ec.isJwtError() && !response.isCommitted()) {
-				writeJwtError(response, ec);
-			}
+		AccessDeniedException accessDeniedException
+	) throws IOException {
+		if (response.isCommitted()) {
+			return;
 		}
+		writeError(response, ErrorCode.ACCESS_DENIED);
 	}
 
-	private void writeJwtError(HttpServletResponse response, ErrorCode ec) throws IOException {
-		response.setStatus(ec.getHttpStatusCode());
+	private void writeError(HttpServletResponse response, ErrorCode errorCode) throws IOException {
+		response.setStatus(errorCode.getHttpStatusCode());
 		response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 		response.setCharacterEncoding("UTF-8");
 
 		var body = ApiResponse.fail(
-			ec.getCode(),
-			List.of(ErrorDetail.reasonOnly(ec.getReason()))
+			errorCode.getCode(),
+			List.of(ErrorDetail.reasonOnly(errorCode.getReason()))
 		);
-
 		response.getWriter().write(objectMapper.writeValueAsString(body));
 	}
 }

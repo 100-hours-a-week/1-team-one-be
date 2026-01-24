@@ -10,6 +10,9 @@ public enum ErrorCode {
 	// common
 	// [400]
 	INVALID_JSON(400, "INVALID_JSON", "json format is invalid"),
+	// [405]
+	METHOD_NOT_ALLOWED(405, "METHOD_NOT_ALLOWED", "method not allowed"),
+	ACCESS_DENIED(403, "ACCESS_DENIED", "access denied"),
 	USER_NOT_FOUND(404, "NOT_FOUND", "resource not found"),
 	VALIDATION_FAILED(422, "VALIDATION_FAILED", "request validation failed"),
 	// [500]
