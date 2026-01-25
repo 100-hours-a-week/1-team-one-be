@@ -8,5 +8,5 @@ import com.raisedeveloper.server.domain.auth.domain.FcmToken;
 
 public interface FcmTokenRepository extends JpaRepository<FcmToken, Long> {
 
-	Optional<FcmToken> findFirstByUserIdOrderByCreatedAtDesc(Long userId);
+	Optional<FcmToken> findFirstByUserIdAndRevokedAtNull(Long userId);
 }
