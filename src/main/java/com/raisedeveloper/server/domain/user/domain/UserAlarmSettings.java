@@ -41,10 +41,8 @@ public class UserAlarmSettings extends CreatedUpdatedEntity {
 	@Column(nullable = false)
 	private LocalTime activeEndAt;
 
-	@Column(nullable = false)
 	private LocalTime focusStartAt;
 
-	@Column(nullable = false)
 	private LocalTime focusEndAt;
 
 	@Column(nullable = false)
@@ -62,8 +60,7 @@ public class UserAlarmSettings extends CreatedUpdatedEntity {
 		LocalTime activeEndAt,
 		LocalTime focusStartAt,
 		LocalTime focusEndAt,
-		String repeatDays,
-		LocalDateTime dndFinishedAt
+		String repeatDays
 	) {
 		this.user = user;
 		this.alarmInterval = interval;
@@ -72,7 +69,6 @@ public class UserAlarmSettings extends CreatedUpdatedEntity {
 		this.focusStartAt = focusStartAt;
 		this.focusEndAt = focusEndAt;
 		this.repeatDays = repeatDays;
-		this.dndFinishedAt = dndFinishedAt;
 		this.dnd = false;
 	}
 
@@ -82,8 +78,7 @@ public class UserAlarmSettings extends CreatedUpdatedEntity {
 		LocalTime activeEndAt,
 		LocalTime focusStartAt,
 		LocalTime focusEndAt,
-		String repeatDays,
-		LocalDateTime dndFinishedAt
+		String repeatDays
 	) {
 		this.alarmInterval = interval;
 		this.activeStartAt = activeStartAt;
@@ -91,7 +86,6 @@ public class UserAlarmSettings extends CreatedUpdatedEntity {
 		this.focusStartAt = focusStartAt;
 		this.focusEndAt = focusEndAt;
 		this.repeatDays = repeatDays;
-		this.dndFinishedAt = dndFinishedAt;
 	}
 
 	public void enableDnd(LocalDateTime dndFinishedAt) {
