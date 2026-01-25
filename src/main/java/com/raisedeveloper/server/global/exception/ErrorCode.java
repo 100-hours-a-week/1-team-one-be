@@ -39,7 +39,10 @@ public enum ErrorCode {
 	CHARACTER_ALREADY_SET(409, "CHARACTER_ALREADY_SET", "character type is already selected."),
 
 	// survey domain
-	SURVEY_NOT_FOUND(404, "SURVEY_NOT_FOUND", "survey not found");
+	SURVEY_NOT_FOUND(404, "SURVEY_NOT_FOUND", "survey not found"),
+
+	// routine domain
+	ROUTINE_NOT_FOUND(404, "ROUTINE_NOT_FOUND", "routine not found");
 
 	private final int httpStatusCode;
 	private final String code;
