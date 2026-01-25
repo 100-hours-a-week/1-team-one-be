@@ -10,6 +10,9 @@ public enum ErrorCode {
 	// common
 	// [400]
 	INVALID_JSON(400, "INVALID_JSON", "json format is invalid"),
+	// [405]
+	METHOD_NOT_ALLOWED(405, "METHOD_NOT_ALLOWED", "method not allowed"),
+	ACCESS_DENIED(403, "ACCESS_DENIED", "access denied"),
 	USER_NOT_FOUND(404, "NOT_FOUND", "resource not found"),
 	VALIDATION_FAILED(422, "VALIDATION_FAILED", "request validation failed"),
 	// [500]
@@ -33,7 +36,13 @@ public enum ErrorCode {
 	CHARACTER_NOT_SET(409, "CHARACTER_NOT_FOUND", "character is not set"),
 	USER_EMAIL_DUPLICATED(409, "USER_EMAIL_DUPLICATED", "email already in use."),
 	USER_NICKNAME_DUPLICATED(409, "USER_NICKNAME_DUPLICATED", "nickname already in use."),
-	CHARACTER_ALREADY_SET(409, "CHARACTER_ALREADY_SET", "character type is already selected.");
+	CHARACTER_ALREADY_SET(409, "CHARACTER_ALREADY_SET", "character type is already selected."),
+
+	// survey domain
+	SURVEY_NOT_FOUND(404, "SURVEY_NOT_FOUND", "survey not found"),
+
+	// routine domain
+	ROUTINE_NOT_FOUND(404, "ROUTINE_NOT_FOUND", "routine not found");
 
 	private final int httpStatusCode;
 	private final String code;
