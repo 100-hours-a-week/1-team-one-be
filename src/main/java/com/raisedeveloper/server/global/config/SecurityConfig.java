@@ -57,7 +57,7 @@ public class SecurityConfig {
 					"/auth/**",
 					"/health",
 					"/actuator/**",
-					"/api/exercises"
+					"/exercises"
 				).permitAll()
 				.requestMatchers("/admin/**").hasRole("ADMIN")
 				.anyRequest().authenticated()
