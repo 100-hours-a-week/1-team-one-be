@@ -11,6 +11,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.raisedeveloper.server.domain.survey.domain.Survey;
 import com.raisedeveloper.server.domain.survey.domain.SurveyOption;
+import com.raisedeveloper.server.domain.routine.application.RoutineService;
+import com.raisedeveloper.server.domain.routine.client.AiRoutineClient;
+import com.raisedeveloper.server.domain.routine.client.dto.AiRoutineResponse;
+import com.raisedeveloper.server.domain.routine.client.dto.AiSurveyQuestion;
 import com.raisedeveloper.server.domain.survey.domain.SurveyQuestion;
 import com.raisedeveloper.server.domain.survey.domain.SurveyResponse;
 import com.raisedeveloper.server.domain.survey.domain.SurveySubmission;
@@ -44,6 +48,8 @@ public class SurveyService {
 	private final SurveySubmissionRepository surveySubmissionRepository;
 	private final SurveyResponseRepository surveyResponseRepository;
 	private final UserRepository userRepository;
+	private final AiRoutineClient aiRoutineClient;
+	private final RoutineService routineService;
 
 	public SurveyDetailResponse getSurvey() {
 		Survey survey = surveyRepository.findFirstByIsActiveTrueOrderByVersionDesc()
@@ -110,6 +116,32 @@ public class SurveyService {
 			))
 			.toList();
 		surveyResponseRepository.saveAll(responses);
+
+		try {
+			List<AiSurveyQuestion> aiSurveyQuestions = request.responses().stream()
+				.map(answer -> {
+					SurveyQuestion question = questionMap.get(answer.questionId());
+					SurveyOption option = optionMap.get(answer.optionId());
+					return new AiSurveyQuestion(
+						question.getContent(),
+						option.getSortOrder()
+					);
+				})
+				.toList();
+
+			AiRoutineResponse aiResponse = aiRoutineClient.generateRoutines(
+				user.getId(),
+				submission.getId(),
+				aiSurveyQuestions
+			);
+
+			routineService.createRoutinesFromAiResponse(user, submission, aiResponse);
+
+		} catch (CustomException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new CustomException(ErrorCode.AI_ROUTINE_GENERATION_FAILED);
+		}
 
 		return SurveySubmissionResponse.from(submission.getId());
 	}
