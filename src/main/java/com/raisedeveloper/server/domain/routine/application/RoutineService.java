@@ -1,5 +1,6 @@
 package com.raisedeveloper.server.domain.routine.application;
 
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.raisedeveloper.server.domain.exercise.domain.Exercise;
+import com.raisedeveloper.server.domain.exercise.infra.ExerciseRepository;
 import com.raisedeveloper.server.domain.routine.domain.Routine;
 import com.raisedeveloper.server.domain.routine.domain.RoutineStep;
 import com.raisedeveloper.server.domain.routine.dto.RoutineExerciseResponse;
@@ -28,6 +30,7 @@ public class RoutineService {
 	private final RoutineRepository routineRepository;
 	private final RoutineStepRepository routineStepRepository;
 	private final UserRepository userRepository;
+	private final ExerciseRepository exerciseRepository;
 
 	public RoutinePlanResponse getMyRoutine(Long userId) {
 		userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
@@ -42,16 +45,26 @@ public class RoutineService {
 		List<Long> routineIds = routines.stream().map(Routine::getId).toList();
 		List<RoutineStep> steps = routineStepRepository
 			.findAllByRoutineIdIn(routineIds);
+
+		steps.sort(Comparator.comparingInt(s -> s.getRoutine().getRoutineOrder()));
+
 		Map<Long, RoutineExerciseResponse> uniqueExercises = new LinkedHashMap<>();
+		Routine primaryRoutine = null;
+
 		for (RoutineStep step : steps) {
 			Exercise exercise = step.getExercise();
+			Routine routine = step.getRoutine();
+
+			if (primaryRoutine == null) {
+				primaryRoutine = routine;
+			}
+
 			uniqueExercises.putIfAbsent(
 				exercise.getId(),
-				toExerciseResponse(exercise, step.getReason())
+				toExerciseResponse(exercise, routine.getReason())
 			);
 		}
 
-		Routine primaryRoutine = routines.get(0);
 		return new RoutinePlanResponse(
 			primaryRoutine.getStatus(),
 			primaryRoutine.getId(),
