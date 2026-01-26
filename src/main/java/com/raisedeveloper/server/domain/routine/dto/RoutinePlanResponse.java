@@ -2,8 +2,10 @@ package com.raisedeveloper.server.domain.routine.dto;
 
 import java.util.List;
 
+import com.raisedeveloper.server.domain.common.enums.RoutineStatus;
+
 public record RoutinePlanResponse(
-	String status,
+	RoutineStatus status,
 	Long routineId,
 	List<RoutineExerciseResponse> exercises
 ) {
