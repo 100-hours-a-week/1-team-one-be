@@ -2,6 +2,7 @@ HELP.md
 
 docs/
 CLAUDE.md
+src/main/resources/firebase/
 
 .gradle
 build/

@@ -120,7 +120,7 @@ public class AuthService {
 			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
 		);
 
-		fcmTokenRepository.findFirstByUserIdOrderByCreatedAtDesc(userId)
+		fcmTokenRepository.findFirstByUserIdAndRevokedAtNull(userId)
 			.ifPresentOrElse(
 				existing -> existing.updateToken(fcmToken),
 				() -> fcmTokenRepository.save(new FcmToken(user, fcmToken))
