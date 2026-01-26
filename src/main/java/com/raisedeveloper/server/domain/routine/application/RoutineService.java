@@ -173,7 +173,7 @@ public class RoutineService {
 
 	private void validateExerciseType(Exercise exercise, AiRoutineStepDto stepDto) {
 		ExerciseType exerciseType = exercise.getType();
-		if (!exerciseType.name().equals(stepDto.type())) {
+		if (!exerciseType.equals(stepDto.type())) {
 			throw new CustomException(
 				ErrorCode.EXERCISE_TYPE_MISMATCH,
 				List.of(
