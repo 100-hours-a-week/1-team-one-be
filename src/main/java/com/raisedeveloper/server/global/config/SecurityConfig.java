@@ -17,9 +17,9 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.raisedeveloper.server.global.security.jwt.JwtAuthenticationFilter;
 import com.raisedeveloper.server.global.security.jwt.JwtAccessDeniedHandler;
 import com.raisedeveloper.server.global.security.jwt.JwtAuthenticationEntryPoint;
+import com.raisedeveloper.server.global.security.jwt.JwtAuthenticationFilter;
 import com.raisedeveloper.server.global.security.jwt.JwtExceptionFilter;
 import com.raisedeveloper.server.global.security.jwt.JwtTokenProvider;
 
@@ -56,7 +56,8 @@ public class SecurityConfig {
 				.requestMatchers(
 					"/auth/**",
 					"/health",
-					"/actuator/**"
+					"/actuator/**",
+					"/api/exercises"
 				).permitAll()
 				.requestMatchers("/admin/**").hasRole("ADMIN")
 				.anyRequest().authenticated()
