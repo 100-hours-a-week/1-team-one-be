@@ -134,8 +134,7 @@ public class UserService {
 					request.activeEndAt(),
 					request.focusStartAt(),
 					request.focusEndAt(),
-					repeatDays,
-					request.dndFinishedAt()
+					repeatDays
 				),
 				() -> userAlarmSettingsRepository.save(new UserAlarmSettings(
 					user,
@@ -144,8 +143,7 @@ public class UserService {
 					request.activeEndAt(),
 					request.focusStartAt(),
 					request.focusEndAt(),
-					repeatDays,
-					request.dndFinishedAt()
+					repeatDays
 				))
 			);
 	}

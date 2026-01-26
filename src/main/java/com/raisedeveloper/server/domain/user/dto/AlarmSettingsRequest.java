@@ -2,7 +2,6 @@ package com.raisedeveloper.server.domain.user.dto;
 
 import static com.raisedeveloper.server.global.validation.RegexPatterns.*;
 
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
@@ -24,16 +23,11 @@ public record AlarmSettingsRequest(
 	@NotNull
 	LocalTime activeEndAt,
 
-	@NotNull
 	LocalTime focusStartAt,
 
-	@NotNull
 	LocalTime focusEndAt,
 
 	@NotEmpty
-	List<@Pattern(regexp = REPEAT_DAY_REGEX) String> repeatDays,
-
-	@NotNull
-	LocalDateTime dndFinishedAt
+	List<@Pattern(regexp = REPEAT_DAY_REGEX) String> repeatDays
 ) {
 }
