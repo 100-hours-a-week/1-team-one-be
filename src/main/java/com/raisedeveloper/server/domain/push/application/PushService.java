@@ -5,5 +5,5 @@ import com.raisedeveloper.server.domain.user.domain.User;
 
 public interface PushService {
 
-	void sendSessionNotification(User user, ExerciseSession session);
+	void sendSessionPush(User user, ExerciseSession session);
 }
