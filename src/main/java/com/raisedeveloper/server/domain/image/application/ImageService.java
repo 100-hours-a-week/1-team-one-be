@@ -50,7 +50,6 @@ public class ImageService {
 			request.contentType(),
 			Duration.ofMinutes(presignedUrlDuration)
 		);
-		
 		LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(presignedUrlDuration);
 
 		log.info("Generated presigned URL for imageType: {}, filePath: {}",
@@ -103,7 +102,6 @@ public class ImageService {
 			);
 		}
 
-		// 경로 traversal 공격 방지
 		if (filePath.contains("..") || filePath.contains("//")) {
 			throw new CustomException(
 				ErrorCode.INVALID_FILE_PATH,
