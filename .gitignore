@@ -3,6 +3,7 @@ HELP.md
 docs/
 CLAUDE.md
 src/main/resources/firebase/
+src/main/resources/gcs
 
 .gradle
 build/
