@@ -1,5 +1,9 @@
 HELP.md
 
+docs/
+CLAUDE.md
+src/main/resources/firebase/
+
 .gradle
 build/
 !gradle/wrapper/gradle-wrapper.jar
