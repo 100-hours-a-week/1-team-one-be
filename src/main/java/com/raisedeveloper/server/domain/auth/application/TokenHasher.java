@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 public class TokenHasher {
 	private final SecretKeySpec keySpec;
 
-	public TokenHasher(@Value("${TOKEN_HASH_SECRET}") String secret) {
+	public TokenHasher(@Value("${auth.token.hash-secret}") String secret) {
 		this.keySpec = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
 	}
 

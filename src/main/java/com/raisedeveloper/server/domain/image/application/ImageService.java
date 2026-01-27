@@ -25,9 +25,13 @@ public class ImageService {
 
 	private final StorageService storageService;
 
-	private static final List<String> ALLOWED_EXTENSIONS = List.of("jpg", "jpeg", "png", "gif", "webp");
+	@Value("#{'${image.allowed-extensions.profile}'.split(',')}")
+	private List<String> profileImageExtensions;
 
-	@Value("${image.presigned-url-duration:15}")
+	@Value("#{'${image.allowed-extensions.post}'.split(',')}")
+	private List<String> postImageExtensions;
+
+	@Value("${image.presigned-url-duration}")
 	private int presignedUrlDuration;
 
 	public PresignedUrlResponse generateUploadUrl(
@@ -35,7 +39,7 @@ public class ImageService {
 		PresignedUrlRequest request
 	) {
 		String extension = extractExtension(request.fileName());
-		validateExtension(extension);
+		validateExtension(imageType, extension);
 
 		String uniqueFileName = generateUniqueFileName(extension);
 
@@ -74,8 +78,11 @@ public class ImageService {
 		return fileName.substring(lastDotIndex + 1).toLowerCase();
 	}
 
-	private void validateExtension(String extension) {
-		if (!ALLOWED_EXTENSIONS.contains(extension)) {
+	private void validateExtension(ImageType imageType, String extension) {
+		List<String> allowedExtensions = imageType == ImageType.USER_PROFILE
+			? profileImageExtensions
+			: postImageExtensions;
+		if (!allowedExtensions.contains(extension)) {
 			throw new CustomException(
 				ErrorCode.INVALID_FILE_EXTENSION,
 				List.of(ErrorDetail.field("extension", extension))
