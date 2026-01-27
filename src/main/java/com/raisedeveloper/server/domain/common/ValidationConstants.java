@@ -16,4 +16,7 @@ public final class ValidationConstants {
 	public static final String FCM_TOKEN_INVALID = "FCM 토큰이 유효하지 않습니다.";
 
 	public static final String IMAGE_PATH_REQUIRED = "이미지 경로는 필수 값입니다.";
+
+	public static final String FILE_NAME_REQUIRED = "파일명은 필수입니다.";
+	public static final String CONTENT_TYPE_REQUIRED = "컨텐츠 타입은 필수입니다.";
 }
