@@ -9,6 +9,7 @@ import com.raisedeveloper.server.domain.exercise.domain.ExerciseSession;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseListResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseResponse;
 import com.raisedeveloper.server.domain.exercise.infra.ExerciseRepository;
+import com.raisedeveloper.server.domain.exercise.infra.ExerciseSessionRepository;
 import com.raisedeveloper.server.domain.routine.domain.Routine;
 import com.raisedeveloper.server.domain.routine.infra.RoutineRepository;
 import com.raisedeveloper.server.domain.user.domain.User;
@@ -26,13 +27,15 @@ public class ExerciseService {
 
 	private final RoutineRepository routineRepository;
 	private final ExerciseRepository exerciseRepository;
+	private final ExerciseSessionRepository exerciseSessionRepository;
 
 	@Transactional
 	public ExerciseSession createSession(User user) {
 		Routine activeRoutine = routineRepository.findActiveRoutineByUserId(user.getId())
 			.orElseThrow(() -> new CustomException(ErrorCode.ROUTINE_NOT_FOUND));
 
-		return new ExerciseSession(user, activeRoutine);
+		ExerciseSession session = new ExerciseSession(user, activeRoutine);
+		return exerciseSessionRepository.saveAndFlush(session);
 	}
 
 	public ExerciseListResponse getAllExercises() {
