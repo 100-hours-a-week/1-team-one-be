@@ -34,9 +34,6 @@ public class RoutineStep extends CreatedAtEntity {
 	@JoinColumn(name = "exercise_id", nullable = false)
 	private Exercise exercise;
 
-	@Column(nullable = false)
-	private String reason;
-
 	private Short targetReps;
 
 	private Short durationTime;
@@ -50,7 +47,6 @@ public class RoutineStep extends CreatedAtEntity {
 	public RoutineStep(
 		Routine routine,
 		Exercise exercise,
-		String reason,
 		Short targetReps,
 		Short durationTime,
 		short limitTime,
@@ -58,7 +54,6 @@ public class RoutineStep extends CreatedAtEntity {
 	) {
 		this.routine = routine;
 		this.exercise = exercise;
-		this.reason = reason;
 		this.targetReps = targetReps;
 		this.durationTime = durationTime;
 		this.limitTime = limitTime;

@@ -1,6 +1,5 @@
 package com.raisedeveloper.server.domain.user.infra;
 
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
@@ -18,11 +17,9 @@ public interface UserAlarmSettingsRepository extends JpaRepository<UserAlarmSett
 	@Query("SELECT uas FROM UserAlarmSettings uas "
 		+ "WHERE uas.activeStartAt <= :currentTime "
 		+ "AND uas.activeEndAt >= :currentTime "
-		+ "AND uas.repeatDays LIKE %:currentDay% "
-		+ "AND (uas.dnd = false OR uas.dndFinishedAt < :now)")
+		+ "AND uas.repeatDays LIKE %:currentDay% ")
 	List<UserAlarmSettings> findActiveAlarmSettings(
 		@Param("currentTime") LocalTime currentTime,
-		@Param("currentDay") String currentDay,
-		@Param("now") LocalDateTime now
+		@Param("currentDay") String currentDay
 	);
 }
