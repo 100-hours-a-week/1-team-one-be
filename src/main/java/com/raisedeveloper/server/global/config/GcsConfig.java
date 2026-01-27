@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.Resource;
 
 import com.google.auth.Credentials;
 import com.google.auth.oauth2.GoogleCredentials;
@@ -24,14 +25,14 @@ public class GcsConfig {
 	private String projectId;
 
 	@Value("${storage.gcs.credentials-location}")
-	private String credentialsLocation;
+	private Resource credentialsLocation;
 
 	@Bean
 	public Storage gcsStorage() throws IOException {
 		log.info("Initializing GCS Storage with project-id: {}", projectId);
 
 		Credentials credentials = GoogleCredentials.fromStream(
-			new FileInputStream(credentialsLocation)
+			credentialsLocation.getInputStream()
 		);
 
 		return StorageOptions.newBuilder()
@@ -40,4 +41,5 @@ public class GcsConfig {
 			.build()
 			.getService();
 	}
+
 }
