@@ -42,7 +42,18 @@ public enum ErrorCode {
 	SURVEY_NOT_FOUND(404, "SURVEY_NOT_FOUND", "survey not found"),
 
 	// routine domain
-	ROUTINE_NOT_FOUND(404, "ROUTINE_NOT_FOUND", "routine not found");
+	ROUTINE_NOT_FOUND(404, "ROUTINE_NOT_FOUND", "routine not found"),
+
+	// image domain
+	// [400]
+	INVALID_FILE_EXTENSION(400, "INVALID_FILE_EXTENSION", "허용되지 않은 파일 확장자입니다."),
+	INVALID_FILE_PATH(400, "INVALID_FILE_PATH", "잘못된 파일 경로입니다."),
+	// [404]
+	IMAGE_NOT_FOUND(404, "IMAGE_NOT_FOUND", "이미지를 찾을 수 없습니다."),
+	// [500]
+	IMAGE_UPLOAD_FAILED(500, "IMAGE_UPLOAD_FAILED", "이미지 업로드에 실패했습니다."),
+	IMAGE_DELETE_FAILED(500, "IMAGE_DELETE_FAILED", "이미지 삭제에 실패했습니다."),
+	PRESIGNED_URL_GENERATION_FAILED(500, "PRESIGNED_URL_GENERATION_FAILED", "업로드 URL 생성에 실패했습니다.");
 
 	private final int httpStatusCode;
 	private final String code;
