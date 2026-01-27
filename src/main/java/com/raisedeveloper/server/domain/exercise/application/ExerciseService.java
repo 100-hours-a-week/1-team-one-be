@@ -12,6 +12,8 @@ import com.raisedeveloper.server.domain.exercise.infra.ExerciseRepository;
 import com.raisedeveloper.server.domain.routine.domain.Routine;
 import com.raisedeveloper.server.domain.routine.infra.RoutineRepository;
 import com.raisedeveloper.server.domain.user.domain.User;
+import com.raisedeveloper.server.global.exception.CustomException;
+import com.raisedeveloper.server.global.exception.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +30,7 @@ public class ExerciseService {
 	@Transactional
 	public ExerciseSession createSession(User user) {
 		Routine activeRoutine = routineRepository.findActiveRoutineByUserId(user.getId())
-			.orElseThrow(() -> new IllegalStateException("활성 루틴 없음"));
+			.orElseThrow(() -> new CustomException(ErrorCode.ROUTINE_NOT_FOUND));
 
 		return new ExerciseSession(user, activeRoutine);
 	}
