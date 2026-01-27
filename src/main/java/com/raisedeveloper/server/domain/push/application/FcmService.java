@@ -29,7 +29,7 @@ public class FcmService implements PushService {
 	private final FcmTokenRepository fcmTokenRepository;
 
 	@Override
-	public void sendSessionNotification(User user, ExerciseSession session) {
+	public void sendSessionPush(User user, ExerciseSession session) {
 		String title = "운동할 시간이에요";
 		String body = "오늘 루틴을 시작해볼까요?";
 

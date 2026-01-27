@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -35,8 +36,8 @@ public class PushAlarmScheduler {
 
 	@Scheduled(cron = "0 */1 * * * *")
 	@Transactional
-	public void createSessionsForAlarms() {
-		log.info("세션 생성 스케줄러 시작");
+	public void processAlarms() {
+		log.info("푸시 알람 스케줄러 시작");
 		long startTime = System.currentTimeMillis();
 
 		LocalDateTime now = LocalDateTime.now();
@@ -44,46 +45,54 @@ public class PushAlarmScheduler {
 		DayOfWeek currentDay = now.getDayOfWeek();
 
 		List<UserAlarmSettings> activeAlarmSettings = userAlarmSettingsRepository
-			.findActiveAlarmSettings(currentTime, currentDay.name(), now);
+			.findActiveAlarmSettings(currentTime, currentDay.name());
 
-		log.info("세션 생성 대상 알람 설정 조회 완료: {} 건", activeAlarmSettings.size());
+		log.info("active 시간/요일 대상 알람 설정 조회 완료: {} 건", activeAlarmSettings.size());
 
-		int createdCount = 0;
+		List<UserAlarmSettings> eligibleAlarmSettings = filterEligibleAlarmSettings(
+			activeAlarmSettings, now, currentTime
+		);
 
-		for (UserAlarmSettings alarmSettings : activeAlarmSettings) {
-			if (shouldCreateSession(alarmSettings, now, currentTime)) {
-				User user = alarmSettings.getUser();
-				try {
-					ExerciseSession session = exerciseService.createSession(user);
-					try {
-						pushService.sendSessionNotification(user, session);
-						createdCount++;
-					} catch (Exception e) {
-						log.error("푸시 알림 전송 실패 - userId: {}, sessionId: {}", user.getId(), session.getId(), e);
-					}
-				} catch (CustomException e) {
-					if (e.getErrorCode() == ErrorCode.ROUTINE_NOT_FOUND) {
-						log.warn("활성 루틴이 없어 세션 생성 건너뜀 - userId: {}", user.getId());
-					}
-				} catch (Exception e) {
-					log.error("세션 생성 실패 - userId: {}", alarmSettings.getUser().getId(), e);
-				}
-			}
-		}
+		log.info("알람 전송 대상 알람 설정 필터 완료: {} 건", eligibleAlarmSettings.size());
+
+		List<ExerciseSession> createdSessions = createSessions(eligibleAlarmSettings);
+		log.info("세션 생성 완료: {} 건", createdSessions.size());
+
+		sendSessionAlarms(createdSessions);
+
 		long elapsedTime = System.currentTimeMillis() - startTime;
-		log.info("세션 생성 스케줄러 완료: 생성 건수={}, 소요 시간={}ms", createdCount, elapsedTime);
+		log.info("푸시 알람 스케줄러 완료: 세션 생성 건수={}, 소요 시간={}ms",
+			createdSessions.size(), elapsedTime);
 	}
 
-	private boolean shouldCreateSession(
-		UserAlarmSettings alarmSettings,
+	private List<UserAlarmSettings> filterEligibleAlarmSettings(
+		List<UserAlarmSettings> activeAlarmSettings,
 		LocalDateTime now,
 		LocalTime currentTime
 	) {
-		if (isInFocusTime(currentTime, alarmSettings)) {
-			log.debug("집중 시간으로 세션 생성 제외 - userId: {}", alarmSettings.getUser().getId());
-			return false;
-		}
+		return activeAlarmSettings.stream()
+			.filter(alarmSettings -> {
+				if (isInFocusTime(currentTime, alarmSettings)) {
+					log.debug("집중 시간으로 알람 대상 제외 - userId: {}", alarmSettings.getUser().getId());
+					return false;
+				}
+				return true;
+			})
+			.filter(alarmSettings -> {
+				if (isInDnd(now, alarmSettings)) {
+					log.debug("DND 활성화로 알람 대상 제외 - userId: {}", alarmSettings.getUser().getId());
+					return false;
+				}
+				return true;
+			})
+			.filter(alarmSettings -> isIntervalElapsed(alarmSettings, now))
+			.toList();
+	}
 
+	private boolean isIntervalElapsed(
+		UserAlarmSettings alarmSettings,
+		LocalDateTime now
+	) {
 		return exerciseSessionRepository.findLatestByUserId(alarmSettings.getUser().getId())
 			.map(lastSession -> {
 				long minutesSinceLastSession = ChronoUnit.MINUTES.between(
@@ -105,10 +114,65 @@ public class PushAlarmScheduler {
 		LocalTime focusStart = alarmSettings.getFocusStartAt();
 		LocalTime focusEnd = alarmSettings.getFocusEndAt();
 
+		if (focusStart == null || focusEnd == null) {
+			return false;
+		}
+
 		if (focusStart.isAfter(focusEnd)) {
 			return currentTime.isAfter(focusStart) || currentTime.isBefore(focusEnd);
 		}
 
 		return !currentTime.isBefore(focusStart) && !currentTime.isAfter(focusEnd);
 	}
+
+	private boolean isInDnd(LocalDateTime now, UserAlarmSettings alarmSettings) {
+		if (!alarmSettings.isDnd()) {
+			return false;
+		}
+
+		LocalDateTime dndFinishedAt = alarmSettings.getDndFinishedAt();
+		if (dndFinishedAt == null) {
+			return true;
+		}
+
+		return dndFinishedAt.isAfter(now);
+	}
+
+	private List<ExerciseSession> createSessions(List<UserAlarmSettings> alarmSettingsList) {
+		return alarmSettingsList.stream()
+			.map(UserAlarmSettings::getUser)
+			.map(this::tryCreateSession)
+			.flatMap(Optional::stream)
+			.toList();
+	}
+
+	private void sendSessionAlarms(List<ExerciseSession> sessions) {
+		sessions.forEach(session -> trySendSessionAlarm(session.getUser(), session));
+	}
+
+	private Optional<ExerciseSession> tryCreateSession(User user) {
+		try {
+			return Optional.of(exerciseService.createSession(user));
+		} catch (CustomException e) {
+			if (e.getErrorCode() == ErrorCode.ROUTINE_NOT_FOUND) {
+				log.warn("활성 루틴이 없어 세션 생성 건너뜀 - userId: {}", user.getId());
+				return Optional.empty();
+			}
+
+			log.error("세션 생성 실패(CustomException) - userId: {}, code: {}", user.getId(), e.getErrorCode(), e);
+			return Optional.empty();
+		} catch (Exception e) {
+			log.error("세션 생성 실패 - userId: {}", user.getId(), e);
+			return Optional.empty();
+		}
+	}
+
+	private void trySendSessionAlarm(User user, ExerciseSession session) {
+		try {
+			pushService.sendSessionPush(user, session);
+		} catch (Exception e) {
+			log.error("푸시 알림 전송 실패 - userId: {}, sessionId: {}", user.getId(), session.getId(), e);
+		}
+	}
+
 }
