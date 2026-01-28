@@ -1,5 +1,7 @@
 package com.raisedeveloper.server.domain.exercise.infra;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -8,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.raisedeveloper.server.domain.exercise.domain.ExerciseSession;
+import com.raisedeveloper.server.domain.stats.dto.GrassStatsProjection;
 
 @Repository
 public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession, Long> {
@@ -36,5 +39,20 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
 		@Param("userId") Long userId,
 		@Param("startAt") java.time.LocalDateTime startAt,
 		@Param("endAt") java.time.LocalDateTime endAt
+	);
+
+	@Query("SELECT CAST(es.createdAt AS LocalDate) as date, "
+		+ "COUNT(es) as targetCount, "
+		+ "SUM(CASE WHEN es.isRoutineCompleted = true THEN 1 ELSE 0 END) as successCount "
+		+ "FROM ExerciseSession es "
+		+ "WHERE es.user.id = :userId "
+		+ "AND es.createdAt >= :startDate "
+		+ "AND es.createdAt < :endDate "
+		+ "GROUP BY CAST(es.createdAt AS LocalDate) "
+		+ "ORDER BY date ASC")
+	List<GrassStatsProjection> findGrassStatsByDateRange(
+		@Param("userId") Long userId,
+		@Param("startDate") LocalDateTime startDate,
+		@Param("endDate") LocalDateTime endDate
 	);
 }
