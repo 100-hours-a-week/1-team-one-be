@@ -58,6 +58,7 @@ public enum ErrorCode {
 	// exercise domain
 	EXERCISE_NOT_FOUND(404, "EXERCISE_NOT_FOUND", "exercise not found"),
 	EXERCISE_TYPE_MISMATCH(400, "EXERCISE_TYPE_MISMATCH", "exercise type mismatch"),
+	EXERCISE_SESSION_NOT_FOUND(404, "EXERCISE_SESSION_NOT_FOUND", "exercise session not found"),
 
 	// AI server
 	AI_SERVER_CONNECTION_FAILED(503, "AI_SERVER_CONNECTION_FAILED", "AI 서버에 연결할 수 없습니다"),

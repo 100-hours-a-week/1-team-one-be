@@ -17,4 +17,24 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
 		+ "ORDER BY es.createdAt DESC "
 		+ "LIMIT 1")
 	Optional<ExerciseSession> findLatestByUserId(@Param("userId") Long userId);
+
+	@Query("SELECT es FROM ExerciseSession es "
+		+ "JOIN FETCH es.routine r "
+		+ "WHERE es.id = :sessionId AND es.user.id = :userId")
+	Optional<ExerciseSession> findByIdAndUserIdWithRoutine(
+		@Param("sessionId") Long sessionId,
+		@Param("userId") Long userId
+	);
+
+	@Query("SELECT CASE WHEN COUNT(es) > 0 THEN true ELSE false END "
+		+ "FROM ExerciseSession es "
+		+ "WHERE es.user.id = :userId "
+		+ "AND es.isRoutineCompleted = true "
+		+ "AND es.startAt >= :startAt "
+		+ "AND es.startAt < :endAt")
+	boolean existsCompletedInRange(
+		@Param("userId") Long userId,
+		@Param("startAt") java.time.LocalDateTime startAt,
+		@Param("endAt") java.time.LocalDateTime endAt
+	);
 }
