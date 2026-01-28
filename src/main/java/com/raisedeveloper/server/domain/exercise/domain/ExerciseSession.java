@@ -56,7 +56,8 @@ public class ExerciseSession extends CreatedUpdatedEntity {
 		this.isRoutineCompleted = true;
 	}
 
-	public void sessionFailed() {
+	public void sessionFailed(LocalDateTime failedAt) {
+		this.endAt = failedAt;
 		this.isRoutineCompleted = false;
 	}
 

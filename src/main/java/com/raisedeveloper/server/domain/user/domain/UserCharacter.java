@@ -70,6 +70,10 @@ public class UserCharacter extends CreatedUpdatedEntity {
 		this.statusScore += earnedStatusScore;
 	}
 
+	public void subtractStatusScore(int penalty) {
+		this.statusScore = Math.max(0, this.statusScore - penalty);
+	}
+
 	public void incrementStreak() {
 		this.streak += 1;
 	}

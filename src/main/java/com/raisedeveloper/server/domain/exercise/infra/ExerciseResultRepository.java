@@ -18,4 +18,8 @@ public interface ExerciseResultRepository extends JpaRepository<ExerciseResult, 
 		+ "WHERE er.exerciseSession.id = :sessionId "
 		+ "ORDER BY rs.stepOrder")
 	List<ExerciseResult> findByExerciseSessionIdWithDetails(@Param("sessionId") Long sessionId);
+
+	@Query("SELECT er FROM ExerciseResult er "
+		+ "WHERE er.exerciseSession.id IN :sessionIds")
+	List<ExerciseResult> findByExerciseSessionIds(@Param("sessionIds") List<Long> sessionIds);
 }

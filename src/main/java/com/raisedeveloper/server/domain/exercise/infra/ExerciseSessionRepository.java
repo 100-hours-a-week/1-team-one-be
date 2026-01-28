@@ -55,4 +55,10 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
 		@Param("startDate") LocalDateTime startDate,
 		@Param("endDate") LocalDateTime endDate
 	);
+
+	@Query("SELECT es FROM ExerciseSession es "
+		+ "WHERE es.isRoutineCompleted = false "
+		+ "AND es.updatedAt = es.createdAt "
+		+ "AND es.createdAt <= :cutoff")
+	List<ExerciseSession> findStaleUnupdatedSessions(@Param("cutoff") LocalDateTime cutoff);
 }
