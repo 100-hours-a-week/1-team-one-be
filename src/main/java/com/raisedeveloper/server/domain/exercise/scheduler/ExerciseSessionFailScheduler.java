@@ -13,6 +13,7 @@ import com.raisedeveloper.server.domain.exercise.domain.ExerciseResult;
 import com.raisedeveloper.server.domain.exercise.domain.ExerciseSession;
 import com.raisedeveloper.server.domain.exercise.infra.ExerciseResultRepository;
 import com.raisedeveloper.server.domain.exercise.infra.ExerciseSessionRepository;
+import com.raisedeveloper.server.domain.notification.application.NotificationService;
 import com.raisedeveloper.server.domain.user.domain.UserCharacter;
 import com.raisedeveloper.server.domain.user.infra.UserCharacterRepository;
 
@@ -29,6 +30,7 @@ public class ExerciseSessionFailScheduler {
 	private final ExerciseSessionRepository exerciseSessionRepository;
 	private final ExerciseResultRepository exerciseResultRepository;
 	private final UserCharacterRepository userCharacterRepository;
+	private final NotificationService notificationService;
 
 	@Scheduled(cron = "0 */1 * * * *")
 	@Transactional
@@ -73,6 +75,7 @@ public class ExerciseSessionFailScheduler {
 			}
 
 			character.subtractStatusScore(failedCount);
+			notificationService.createStretchingFailed(session.getUser());
 		}
 		log.info("세션 자동 실패 처리 완료: {} 건", staleSessions.size());
 	}

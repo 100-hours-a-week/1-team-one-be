@@ -19,4 +19,7 @@ public final class ValidationConstants {
 
 	public static final String FILE_NAME_REQUIRED = "파일명은 필수입니다.";
 	public static final String CONTENT_TYPE_REQUIRED = "컨텐츠 타입은 필수입니다.";
+
+	private ValidationConstants() {
+	}
 }

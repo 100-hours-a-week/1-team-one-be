@@ -13,6 +13,7 @@ import com.raisedeveloper.server.domain.notification.dto.NotificationListRespons
 import com.raisedeveloper.server.domain.notification.dto.NotificationPagingResponse;
 import com.raisedeveloper.server.domain.notification.dto.NotificationUnreadCountResponse;
 import com.raisedeveloper.server.domain.notification.infra.UserNotificationRepository;
+import com.raisedeveloper.server.domain.user.domain.User;
 
 import lombok.RequiredArgsConstructor;
 
@@ -63,6 +64,27 @@ public class NotificationService {
 			cursor.id(),
 			pageable
 		);
+	}
+
+	@Transactional
+	public void createStretchingSuccess(User user, int earnedExp) {
+		String details = String.format("exp +%dp", earnedExp);
+		UserNotification notification = new UserNotification(
+			user,
+			NotificationConstants.STRETCHING_SUCCESS,
+			details
+		);
+		userNotificationRepository.save(notification);
+	}
+
+	@Transactional
+	public void createStretchingFailed(User user) {
+		UserNotification notification = new UserNotification(
+			user,
+			NotificationConstants.STRETCHING_FAILED,
+			null
+		);
+		userNotificationRepository.save(notification);
 	}
 
 	private int normalizeLimit(Integer limit) {
