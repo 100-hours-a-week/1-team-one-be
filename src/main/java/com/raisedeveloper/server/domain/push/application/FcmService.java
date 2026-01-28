@@ -1,6 +1,6 @@
 package com.raisedeveloper.server.domain.push.application;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
@@ -81,7 +81,7 @@ public class FcmService implements PushService {
 	}
 
 	private Map<String, String> buildSessionData(ExerciseSession session) {
-		String timestamp = LocalDate.now()
+		String timestamp = LocalDateTime.now()
 			.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
 		return Map.of(
