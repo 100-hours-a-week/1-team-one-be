@@ -25,4 +25,16 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
 		@Param("sessionId") Long sessionId,
 		@Param("userId") Long userId
 	);
+
+	@Query("SELECT CASE WHEN COUNT(es) > 0 THEN true ELSE false END "
+		+ "FROM ExerciseSession es "
+		+ "WHERE es.user.id = :userId "
+		+ "AND es.isRoutineCompleted = true "
+		+ "AND es.startAt >= :startAt "
+		+ "AND es.startAt < :endAt")
+	boolean existsCompletedInRange(
+		@Param("userId") Long userId,
+		@Param("startAt") java.time.LocalDateTime startAt,
+		@Param("endAt") java.time.LocalDateTime endAt
+	);
 }
