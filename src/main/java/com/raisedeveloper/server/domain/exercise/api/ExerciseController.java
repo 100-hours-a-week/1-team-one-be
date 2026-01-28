@@ -43,7 +43,7 @@ public class ExerciseController {
 		@Valid @RequestBody ExerciseSessionUpdateRequest request
 	) {
 		Long userId = AuthUtils.resolveUserIdFromContext();
-		ExerciseSessionCompleteResponse response = exerciseSessionService.updateExerciseSession(userId, sessionId,
+		ExerciseSessionCompleteResponse response = exerciseSessionService.completeExerciseSession(userId, sessionId,
 			request);
 		return ApiResponse.success("COMPLETE_EXERCISE_SESSION_SUCCESS", response);
 	}

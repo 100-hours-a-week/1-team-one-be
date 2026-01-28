@@ -16,6 +16,7 @@ import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionUpdateRequest;
 import com.raisedeveloper.server.domain.exercise.infra.ExerciseResultRepository;
 import com.raisedeveloper.server.domain.exercise.infra.ExerciseSessionRepository;
+import com.raisedeveloper.server.domain.notification.application.NotificationService;
 import com.raisedeveloper.server.domain.routine.domain.RoutineStep;
 import com.raisedeveloper.server.domain.user.domain.UserCharacter;
 import com.raisedeveloper.server.global.exception.CustomException;
@@ -34,6 +35,7 @@ public class ExerciseSessionService {
 	private final ExerciseResultRepository exerciseResultRepository;
 	private final com.raisedeveloper.server.domain.routine.infra.RoutineStepRepository routineStepRepository;
 	private final com.raisedeveloper.server.domain.user.infra.UserCharacterRepository userCharacterRepository;
+	private final NotificationService notificationService;
 
 	public ExerciseSessionResponse getExerciseSession(Long userId, Long sessionId) {
 		ExerciseSession session = exerciseSessionRepository
@@ -51,7 +53,7 @@ public class ExerciseSessionService {
 	}
 
 	@Transactional
-	public ExerciseSessionCompleteResponse updateExerciseSession(
+	public ExerciseSessionCompleteResponse completeExerciseSession(
 		Long userId,
 		Long sessionId,
 		ExerciseSessionUpdateRequest request
@@ -113,6 +115,8 @@ public class ExerciseSessionService {
 
 		log.info("Exercise session completed: sessionId={}, userId={}, earnedExp={}, earnedStatusScore={}",
 			sessionId, userId, earnedExp, earnedStatusScore);
+
+		notificationService.createStretchingSuccess(session.getUser(), earnedExp);
 
 		return new ExerciseSessionCompleteResponse(
 			sessionId,
