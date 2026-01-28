@@ -17,4 +17,12 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
 		+ "ORDER BY es.createdAt DESC "
 		+ "LIMIT 1")
 	Optional<ExerciseSession> findLatestByUserId(@Param("userId") Long userId);
+
+	@Query("SELECT es FROM ExerciseSession es "
+		+ "JOIN FETCH es.routine r "
+		+ "WHERE es.id = :sessionId AND es.user.id = :userId")
+	Optional<ExerciseSession> findByIdAndUserIdWithRoutine(
+		@Param("sessionId") Long sessionId,
+		@Param("userId") Long userId
+	);
 }
