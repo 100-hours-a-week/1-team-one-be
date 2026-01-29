@@ -44,9 +44,21 @@ public enum ErrorCode {
 	// routine domain
 	ROUTINE_NOT_FOUND(404, "ROUTINE_NOT_FOUND", "routine not found"),
 
+	// image domain
+	// [400]
+	INVALID_FILE_EXTENSION(400, "INVALID_FILE_EXTENSION", "허용되지 않은 파일 확장자입니다."),
+	INVALID_FILE_PATH(400, "INVALID_FILE_PATH", "잘못된 파일 경로입니다."),
+	// [404]
+	IMAGE_NOT_FOUND(404, "IMAGE_NOT_FOUND", "이미지를 찾을 수 없습니다."),
+	// [500]
+	IMAGE_UPLOAD_FAILED(500, "IMAGE_UPLOAD_FAILED", "이미지 업로드에 실패했습니다."),
+	IMAGE_DELETE_FAILED(500, "IMAGE_DELETE_FAILED", "이미지 삭제에 실패했습니다."),
+	PRESIGNED_URL_GENERATION_FAILED(500, "PRESIGNED_URL_GENERATION_FAILED", "업로드 URL 생성에 실패했습니다."),
+
 	// exercise domain
 	EXERCISE_NOT_FOUND(404, "EXERCISE_NOT_FOUND", "exercise not found"),
 	EXERCISE_TYPE_MISMATCH(400, "EXERCISE_TYPE_MISMATCH", "exercise type mismatch"),
+	EXERCISE_SESSION_NOT_FOUND(404, "EXERCISE_SESSION_NOT_FOUND", "exercise session not found"),
 
 	// AI server
 	AI_SERVER_CONNECTION_FAILED(503, "AI_SERVER_CONNECTION_FAILED", "AI 서버에 연결할 수 없습니다"),

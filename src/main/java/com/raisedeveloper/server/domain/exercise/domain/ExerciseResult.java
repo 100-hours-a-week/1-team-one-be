@@ -72,4 +72,11 @@ public class ExerciseResult extends CreatedUpdatedEntity {
 	public void stepResultsSkipped() {
 		this.status = ExerciseResultStatus.SKIPPED;
 	}
+
+	public void stepResultsFailed(LocalDateTime failedAt) {
+		this.status = ExerciseResultStatus.FAILED;
+		if (this.endAt == null) {
+			this.endAt = failedAt;
+		}
+	}
 }

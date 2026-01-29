@@ -60,4 +60,30 @@ public class UserCharacter extends CreatedUpdatedEntity {
 		this.streak = 0;
 		this.statusScore = 10;
 	}
+
+	public void addExp(int earnedExp) {
+		this.exp += earnedExp;
+		checkLevelUp();
+	}
+
+	public void addStatusScore(int earnedStatusScore) {
+		this.statusScore += earnedStatusScore;
+	}
+
+	public void subtractStatusScore(int penalty) {
+		this.statusScore = Math.max(0, this.statusScore - penalty);
+	}
+
+	public void incrementStreak() {
+		this.streak += 1;
+	}
+
+	private void checkLevelUp() {
+		int expNeededForLevel = 1000;
+		while (this.exp >= expNeededForLevel) {
+			this.level += 1;
+			this.exp -= expNeededForLevel;
+			expNeededForLevel = level * 100;
+		}
+	}
 }
