@@ -32,7 +32,7 @@ public class ExerciseSessionFailScheduler {
 	private final UserCharacterRepository userCharacterRepository;
 	private final NotificationService notificationService;
 
-	@Scheduled(cron = "0 */1 * * * *")
+	@Scheduled(cron = "0 0 */6 * * *")
 	@Transactional
 	public void failStaleSessions() {
 		LocalDateTime now = LocalDateTime.now();
