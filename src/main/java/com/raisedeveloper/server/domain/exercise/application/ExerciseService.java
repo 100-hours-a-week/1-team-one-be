@@ -1,5 +1,6 @@
 package com.raisedeveloper.server.domain.exercise.application;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -37,7 +38,7 @@ public class ExerciseService {
 
 	@Transactional
 	public ExerciseSession createSession(User user) {
-		Routine activeRoutine = routineRepository.findActiveRoutineByUserId(user.getId())
+		Routine activeRoutine = routineRepository.findLeastRecentlyUsedByUserId(user.getId())
 			.orElseThrow(() -> new CustomException(ErrorCode.ROUTINE_NOT_FOUND));
 
 		ExerciseSession session = new ExerciseSession(user, activeRoutine);
@@ -51,6 +52,7 @@ public class ExerciseService {
 			.toList();
 
 		exerciseResultRepository.saveAll(results);
+		activeRoutine.markUsed(LocalDateTime.now());
 
 		return savedSession;
 	}
