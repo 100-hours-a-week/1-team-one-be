@@ -1,5 +1,7 @@
 package com.raisedeveloper.server.domain.routine.domain;
 
+import java.time.LocalDateTime;
+
 import com.raisedeveloper.server.domain.common.domain.CreatedAtEntity;
 import com.raisedeveloper.server.domain.common.enums.RoutineStatus;
 import com.raisedeveloper.server.domain.survey.domain.SurveySubmission;
@@ -51,6 +53,8 @@ public class Routine extends CreatedAtEntity {
 	@Column(nullable = false)
 	private String reason;
 
+	private LocalDateTime lastUsedAt;
+
 	public Routine(
 		User user,
 		SurveySubmission surveySubmission,
@@ -68,5 +72,9 @@ public class Routine extends CreatedAtEntity {
 
 	public void routineInactivated() {
 		this.isActive = false;
+	}
+
+	public void markUsed(java.time.LocalDateTime usedAt) {
+		this.lastUsedAt = usedAt;
 	}
 }

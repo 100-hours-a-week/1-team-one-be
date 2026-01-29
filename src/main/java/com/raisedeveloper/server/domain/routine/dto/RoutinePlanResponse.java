@@ -6,7 +6,7 @@ import com.raisedeveloper.server.domain.common.enums.RoutineStatus;
 
 public record RoutinePlanResponse(
 	RoutineStatus status,
-	Long routineId,
+	Long submissionId,
 	List<RoutineExerciseResponse> exercises
 ) {
 }

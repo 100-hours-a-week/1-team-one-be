@@ -77,7 +77,7 @@ public class RoutineService {
 
 		return new RoutinePlanResponse(
 			primaryRoutine.getStatus(),
-			primaryRoutine.getId(),
+			primaryRoutine.getSurveySubmission().getId(),
 			List.copyOf(uniqueExercises.values())
 		);
 	}
