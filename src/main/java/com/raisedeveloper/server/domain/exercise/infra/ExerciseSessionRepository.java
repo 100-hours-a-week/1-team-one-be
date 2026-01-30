@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -28,6 +29,10 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
 		@Param("sessionId") Long sessionId,
 		@Param("userId") Long userId
 	);
+
+	@EntityGraph(attributePaths = "routine")
+	List<ExerciseSession> findByUserIdAndIsRoutineCompletedFalseAndEndAtIsNullOrderByCreatedAtDesc(
+		Long userId);
 
 	@Query("SELECT CASE WHEN COUNT(es) > 0 THEN true ELSE false END "
 		+ "FROM ExerciseSession es "
