@@ -9,7 +9,6 @@ import java.util.Optional;
 
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.raisedeveloper.server.domain.exercise.application.ExerciseService;
 import com.raisedeveloper.server.domain.exercise.domain.ExerciseSession;
@@ -35,7 +34,6 @@ public class PushAlarmScheduler {
 	private final ExerciseService exerciseService;
 
 	@Scheduled(cron = "0 */1 * * * *")
-	@Transactional
 	public void processAlarms() {
 		log.info("푸시 알람 스케줄러 시작");
 		long startTime = System.currentTimeMillis();
