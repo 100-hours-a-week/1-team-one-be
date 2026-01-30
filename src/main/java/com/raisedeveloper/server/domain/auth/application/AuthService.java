@@ -68,7 +68,7 @@ public class AuthService {
 			throw new CustomException(ErrorCode.AUTH_INVALID_CREDENTIALS);
 		}
 
-		logoutAll(user.getId());
+		revokeRefreshTokens(user.getId());
 		Tokens tokens = issueTokens(user);
 
 		TokenResult refreshToken = tokens.refreshToken();
@@ -106,11 +106,23 @@ public class AuthService {
 
 	@Transactional
 	public void logoutAll(Long userId) {
+		revokeRefreshTokens(userId);
+		revokeFcmTokens(userId);
+	}
+
+	private void revokeRefreshTokens(Long userId) {
 		List<RefreshToken> tokens = refreshTokenRepository.findAllByUserId(userId);
 		for (RefreshToken token : tokens) {
 			if (token.getRevokedAt() == null) {
 				token.revoke();
 			}
+		}
+	}
+
+	private void revokeFcmTokens(Long userId) {
+		List<FcmToken> tokens = fcmTokenRepository.findAllByUserIdAndRevokedAtNull(userId);
+		for (FcmToken token : tokens) {
+			token.revoke();
 		}
 	}
 
