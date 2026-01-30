@@ -158,7 +158,7 @@ public class RoutineService {
 	private Exercise findExerciseById(String exerciseId) {
 		try {
 			Long id = Long.parseLong(exerciseId);
-			return exerciseRepository.findById(id)
+			return exerciseRepository.findByIdAndIsDeprecatedFalse(id)
 				.orElseThrow(() -> new CustomException(
 					ErrorCode.EXERCISE_NOT_FOUND,
 					List.of(ErrorDetail.field("exerciseId", exerciseId))
