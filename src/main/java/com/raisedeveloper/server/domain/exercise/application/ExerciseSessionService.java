@@ -2,6 +2,7 @@ package com.raisedeveloper.server.domain.exercise.application;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -14,6 +15,8 @@ import com.raisedeveloper.server.domain.exercise.dto.ExerciseResultRequest;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionCompleteResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionUpdateRequest;
+import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionValidListResponse;
+import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionValidResponse;
 import com.raisedeveloper.server.domain.exercise.infra.ExerciseResultRepository;
 import com.raisedeveloper.server.domain.exercise.infra.ExerciseSessionRepository;
 import com.raisedeveloper.server.domain.notification.application.NotificationService;
@@ -50,6 +53,20 @@ public class ExerciseSessionService {
 		log.info("Exercise session retrieved: sessionId={}, userId={}", sessionId, userId);
 
 		return ExerciseSessionResponse.of(session, routineSteps);
+	}
+
+	public ExerciseSessionValidListResponse getValidExerciseSessions(Long userId) {
+		List<ExerciseSessionValidResponse> sessions = exerciseSessionRepository
+			.findByUserIdAndIsRoutineCompletedFalseAndEndAtIsNullOrderByCreatedAtDesc(userId)
+			.stream()
+			.map(session -> new ExerciseSessionValidResponse(session.getId(), session.getRoutine().getId(), session.getCreatedAt()))
+			.toList();
+
+		if (sessions.isEmpty()) {
+			return new ExerciseSessionValidListResponse(null);
+		}
+
+		return new ExerciseSessionValidListResponse(sessions);
 	}
 
 	@Transactional

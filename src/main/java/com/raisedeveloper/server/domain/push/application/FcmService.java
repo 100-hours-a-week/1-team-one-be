@@ -86,7 +86,7 @@ public class FcmService implements PushService {
 
 		return Map.of(
 			"type", "SESSION_READY",
-			"id", String.valueOf(session.getId()),
+			"userId", String.valueOf(session.getUser().getId()),
 			"ts", timestamp,
 			"sessionId", String.valueOf(session.getId()),
 			"routineId", String.valueOf(session.getRoutine().getId())

@@ -12,6 +12,7 @@ import com.raisedeveloper.server.domain.exercise.dto.ExerciseListResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionCompleteResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionUpdateRequest;
+import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionValidListResponse;
 import com.raisedeveloper.server.global.response.ApiResponse;
 import com.raisedeveloper.server.global.security.utils.AuthUtils;
 
@@ -28,6 +29,14 @@ public class ExerciseController {
 	@GetMapping("/exercises")
 	public ApiResponse<ExerciseListResponse> getAllExercises() {
 		return ApiResponse.success("GET_EXERCISES_SUCCESS", exerciseService.getAllExercises());
+	}
+
+	@GetMapping("/me/exercise-sessions/valid")
+	public ApiResponse<ExerciseSessionValidListResponse> getValidExerciseSessions() {
+		Long userId = AuthUtils.resolveUserIdFromContext();
+		ExerciseSessionValidListResponse response = exerciseSessionService
+			.getValidExerciseSessions(userId);
+		return ApiResponse.success("GET_VALID_EXERCISE_SESSION_SUCCESS", response);
 	}
 
 	@GetMapping("/me/exercise-sessions/{sessionId}")
