@@ -58,7 +58,7 @@ public class UserCharacter extends CreatedUpdatedEntity {
 		this.level = 1;
 		this.exp = 0;
 		this.streak = 0;
-		this.statusScore = 10;
+		this.statusScore = 40;
 	}
 
 	public void addExp(int earnedExp) {
