@@ -49,6 +49,9 @@ public class Exercise extends CreatedUpdatedEntity {
 	@Column(nullable = false, length = 500)
 	private String tags;
 
+	@Column(nullable = false)
+	private boolean isDeprecated;
+
 	public Exercise(
 		String name,
 		String content,

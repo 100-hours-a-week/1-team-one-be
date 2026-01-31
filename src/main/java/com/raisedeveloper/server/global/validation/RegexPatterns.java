@@ -5,5 +5,5 @@ public final class RegexPatterns {
 	}
 
 	public static final String NICKNAME_REGEX = "^[A-Za-z가-힣]+$";
-	public static final String REPEAT_DAY_REGEX = "^(MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY)$";
+	public static final String REPEAT_DAY_REGEX = "^(MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY)$";
 }

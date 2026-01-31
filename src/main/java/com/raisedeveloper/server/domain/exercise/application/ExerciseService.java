@@ -58,7 +58,7 @@ public class ExerciseService {
 	}
 
 	public ExerciseListResponse getAllExercises() {
-		List<ExerciseResponse> exercises = exerciseRepository.findAll()
+		List<ExerciseResponse> exercises = exerciseRepository.findByIsDeprecatedFalse()
 			.stream()
 			.map(ExerciseResponse::from)
 			.toList();

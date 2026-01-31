@@ -16,7 +16,7 @@ public interface RoutineStepRepository extends JpaRepository<RoutineStep, Long> 
 	);
 
 	@Query("SELECT rs FROM RoutineStep rs "
-		+ "JOIN FETCH rs.exercise "
+		+ "JOIN FETCH rs.exercise e "
 		+ "WHERE rs.routine.id = :routineId "
 		+ "ORDER BY rs.stepOrder")
 	List<RoutineStep> findByRoutineIdWithExercise(@Param("routineId") Long routineId);

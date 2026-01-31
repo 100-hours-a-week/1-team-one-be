@@ -6,6 +6,7 @@ import java.time.ZoneId;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import javax.crypto.SecretKey;
 
@@ -64,6 +65,9 @@ public class JwtTokenProvider {
 		customClaims.put(JwtClaims.CLAIM_EMAIL, claims.email());
 		customClaims.put(JwtClaims.CLAIM_ROLE, claims.role().name());
 		customClaims.put(JwtClaims.CLAIM_TOKEN_TYPE, claims.tokenType().name());
+		if (claims.tokenType() == TokenType.REFRESH) {
+			customClaims.put(JwtClaims.CLAIM_JTI, UUID.randomUUID().toString());
+		}
 
 		String token = Jwts.builder()
 			.issuer(issuer)
