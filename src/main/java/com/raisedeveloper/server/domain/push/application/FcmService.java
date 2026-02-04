@@ -29,6 +29,9 @@ public class FcmService implements PushService {
 
 	@Override
 	public void sendSessionPush(User user, ExerciseSession session) {
+		String title = "운동할 시간이에요";
+		String body = "오늘 루틴을 시작해볼까요?";
+
 		log.info("FCM 세션 알림 전송 - userId: {}, sessionId: {}, routineId: {}",
 			user.getId(), session.getId(), session.getRoutine().getId());
 
@@ -44,7 +47,7 @@ public class FcmService implements PushService {
 		}
 
 		try {
-			sendMessageToToken(fcmToken.getToken(), buildSessionData(session));
+			sendMessageToToken(fcmToken.getToken(), buildSessionData(title, body, session));
 			fcmToken.used();
 			fcmTokenRepository.save(fcmToken);
 		} catch (FirebaseMessagingException e) {
@@ -69,7 +72,7 @@ public class FcmService implements PushService {
 		log.info("FCM 알림 전송 성공 - token: {}, response: {}", token, response);
 	}
 
-	private Map<String, String> buildSessionData(ExerciseSession session) {
+	private Map<String, String> buildSessionData(String title, String body, ExerciseSession session) {
 		String timestamp = LocalDateTime.now()
 			.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
@@ -78,7 +81,9 @@ public class FcmService implements PushService {
 			"userId", String.valueOf(session.getUser().getId()),
 			"ts", timestamp,
 			"sessionId", String.valueOf(session.getId()),
-			"routineId", String.valueOf(session.getRoutine().getId())
+			"routineId", String.valueOf(session.getRoutine().getId()),
+			"title", title,
+			"body", body
 		);
 	}
 
