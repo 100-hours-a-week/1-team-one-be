@@ -42,7 +42,7 @@ public class ExerciseService {
 			.orElseThrow(() -> new CustomException(ErrorCode.ROUTINE_NOT_FOUND));
 
 		ExerciseSession session = new ExerciseSession(user, activeRoutine);
-		ExerciseSession savedSession = exerciseSessionRepository.saveAndFlush(session);
+		ExerciseSession savedSession = exerciseSessionRepository.save(session);
 
 		List<RoutineStep> routineSteps = routineStepRepository
 			.findByRoutineIdWithExercise(activeRoutine.getId());
