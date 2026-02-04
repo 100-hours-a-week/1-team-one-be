@@ -10,7 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
-import com.google.firebase.messaging.Notification;
 import com.raisedeveloper.server.domain.auth.domain.FcmToken;
 import com.raisedeveloper.server.domain.auth.infra.FcmTokenRepository;
 import com.raisedeveloper.server.domain.exercise.domain.ExerciseSession;
@@ -30,9 +29,6 @@ public class FcmService implements PushService {
 
 	@Override
 	public void sendSessionPush(User user, ExerciseSession session) {
-		String title = "운동할 시간이에요";
-		String body = "오늘 루틴을 시작해볼까요?";
-
 		log.info("FCM 세션 알림 전송 - userId: {}, sessionId: {}, routineId: {}",
 			user.getId(), session.getId(), session.getRoutine().getId());
 
@@ -48,7 +44,7 @@ public class FcmService implements PushService {
 		}
 
 		try {
-			sendMessageToToken(fcmToken.getToken(), title, body, buildSessionData(session));
+			sendMessageToToken(fcmToken.getToken(), buildSessionData(session));
 			fcmToken.used();
 			fcmTokenRepository.save(fcmToken);
 		} catch (FirebaseMessagingException e) {
@@ -57,7 +53,7 @@ public class FcmService implements PushService {
 		}
 	}
 
-	private void sendMessageToToken(String token, String title, String body, Map<String, String> data)
+	private void sendMessageToToken(String token, Map<String, String> data)
 		throws FirebaseMessagingException {
 
 		if (firebaseMessaging == null) {
@@ -67,14 +63,7 @@ public class FcmService implements PushService {
 
 		Message.Builder messageBuilder = Message.builder()
 			.setToken(token)
-			.setNotification(Notification.builder()
-				.setTitle(title)
-				.setBody(body)
-				.build());
-
-		if (data != null && !data.isEmpty()) {
-			messageBuilder.putAllData(data);
-		}
+			.putAllData(data);
 
 		String response = firebaseMessaging.send(messageBuilder.build());
 		log.info("FCM 알림 전송 성공 - token: {}, response: {}", token, response);
