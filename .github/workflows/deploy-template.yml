@@ -55,8 +55,6 @@ on:
         required: true
       DISCORD_ROLE_BACKEND_ONCALL:
         required: true
-      GITHUB_TOKEN:
-        required: true
 
 jobs:
   deploy:
