@@ -1,4 +1,4 @@
-name: Backend Deploy Template
+name: BE Deploy Template
 
 on:
   workflow_call:
