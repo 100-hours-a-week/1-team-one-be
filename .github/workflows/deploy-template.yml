@@ -2,6 +2,7 @@ name: BE Deploy Template
 
 permissions:
   contents: write
+  pull-requests: read
 
 on:
   workflow_call:
