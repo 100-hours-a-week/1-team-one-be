@@ -4,7 +4,9 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.google.firebase.messaging.FirebaseMessaging;
@@ -29,12 +31,14 @@ public class FcmService implements PushService {
 	private final FcmTokenRepository fcmTokenRepository;
 
 	@Override
+	@Async("pushExecutor")
+	@Transactional(propagation = Propagation.REQUIRES_NEW)  // ✅ 독립 트랜잭션
 	public void sendSessionPush(User user, ExerciseSession session) {
 		String title = "운동할 시간이에요";
 		String body = "오늘 루틴을 시작해볼까요?";
 
-		log.info("FCM 세션 알림 전송 - userId: {}, sessionId: {}, routineId: {}",
-			user.getId(), session.getId(), session.getRoutine().getId());
+		log.info("FCM 세션 알림 전송 (비동기) - userId: {}, sessionId: {}, thread: {}",
+			user.getId(), session.getId(), Thread.currentThread().getName());
 
 		FcmToken fcmToken = fcmTokenRepository
 			.findFirstByUserIdAndRevokedAtNull(user.getId())
@@ -51,8 +55,12 @@ public class FcmService implements PushService {
 			sendMessageToToken(fcmToken.getToken(), title, body, buildSessionData(session));
 			fcmToken.used();
 			fcmTokenRepository.save(fcmToken);
+
+			log.info("FCM 알림 전송 성공 (비동기) - userId: {}, thread: {}",
+				user.getId(), Thread.currentThread().getName());
 		} catch (FirebaseMessagingException e) {
-			log.error("FCM 알림 전송 실패 - userId: {}, token: {}", user.getId(), fcmToken.getToken(), e);
+			log.error("FCM 알림 전송 실패 - userId: {}, token: {}",
+				user.getId(), fcmToken.getToken(), e);
 			handleSendFailure(fcmToken, e);
 		}
 	}
