@@ -122,7 +122,7 @@ jobs:
     uses: ./.github/workflows/deploy-template.yml
     with:
       environment: dev
-      server_host: ${{ secrets.DEV_SERVER_HOST }}
+      # server_host: ${{ secrets.DEV_SERVER_HOST }}
       pr_number: ${{ github.event.pull_request.number }}
       commit_sha: ${{ github.sha }}
       base_ref: ${{ github.base_ref }}
@@ -131,13 +131,7 @@ jobs:
       repository: ${{ github.repository }}
       run_id: ${{ github.run_id }}
       create_tag: false
-    secrets:
-      SERVER_USER: ${{ secrets.SERVER_USER }}
-      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-      DISCORD_ROLE_BACKEND: ${{ secrets.DISCORD_ROLE_BACKEND }}
-      DISCORD_ROLE_BACKEND_ONCALL: ${{ secrets.DISCORD_ROLE_BACKEND_ONCALL }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    secrets: inherit
 
   # Staging 환경 배포 (main 브랜치 merge 시, 자동)
   deploy-staging:
@@ -145,7 +139,7 @@ jobs:
     uses: ./.github/workflows/deploy-template.yml
     with:
       environment: staging
-      server_host: ${{ secrets.STAGING_SERVER_HOST }}
+      # server_host: ${{ secrets.STAGING_SERVER_HOST }}
       pr_number: ${{ github.event.pull_request.number }}
       commit_sha: ${{ github.sha }}
       base_ref: ${{ github.base_ref }}
@@ -154,13 +148,7 @@ jobs:
       repository: ${{ github.repository }}
       run_id: ${{ github.run_id }}
       create_tag: false
-    secrets:
-      SERVER_USER: ${{ secrets.SERVER_USER }}
-      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-      DISCORD_ROLE_BACKEND: ${{ secrets.DISCORD_ROLE_BACKEND }}
-      DISCORD_ROLE_BACKEND_ONCALL: ${{ secrets.DISCORD_ROLE_BACKEND_ONCALL }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    secrets: inherit
 
   # Production 환경 배포 (Staging 성공 후 수동 승인 필요)
   deploy-production:
@@ -169,7 +157,7 @@ jobs:
     uses: ./.github/workflows/deploy-template.yml
     with:
       environment: production  # GitHub Environment에서 Required reviewers 설정 필수
-      server_host: ${{ secrets.PROD_SERVER_HOST }}
+      # server_host: ${{ secrets.PROD_SERVER_HOST }}
       pr_number: ${{ github.event.pull_request.number }}
       commit_sha: ${{ github.sha }}
       base_ref: ${{ github.base_ref }}
@@ -178,10 +166,4 @@ jobs:
       repository: ${{ github.repository }}
       run_id: ${{ github.run_id }}
       create_tag: true  # Production만 시맨틱 버전 태그 생성
-    secrets:
-      SERVER_USER: ${{ secrets.SERVER_USER }}
-      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-      DISCORD_ROLE_BACKEND: ${{ secrets.DISCORD_ROLE_BACKEND }}
-      DISCORD_ROLE_BACKEND_ONCALL: ${{ secrets.DISCORD_ROLE_BACKEND_ONCALL }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    secrets: inherit

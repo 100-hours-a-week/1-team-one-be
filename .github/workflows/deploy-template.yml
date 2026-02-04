@@ -7,10 +7,6 @@ on:
         description: '배포 환경 (dev, staging, production)'
         required: true
         type: string
-      server_host:
-        description: '배포 대상 서버 호스트'
-        required: true
-        type: string
       pr_number:
         description: 'PR 번호'
         required: true
@@ -98,7 +94,7 @@ jobs:
       - name: Transfer JAR to Server
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ inputs.server_host }}
+          host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
@@ -113,7 +109,7 @@ jobs:
         id: deploy
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ inputs.server_host }}
+          host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
@@ -145,7 +141,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.0
         # continue-on-error: true
         with:
-          host: ${{ inputs.server_host }}
+          host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
@@ -220,7 +216,7 @@ jobs:
         if: steps.healthcheck.outcome == 'success'
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ inputs.server_host }}
+          host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
