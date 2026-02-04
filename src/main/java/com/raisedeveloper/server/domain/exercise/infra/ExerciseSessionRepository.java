@@ -66,4 +66,16 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
 		+ "AND es.updatedAt = es.createdAt "
 		+ "AND es.createdAt <= :cutoff")
 	List<ExerciseSession> findStaleUnupdatedSessions(@Param("cutoff") LocalDateTime cutoff);
+
+	@Query("SELECT es.user.id as userId, MAX(es.createdAt) as lastCreatedAt "
+		+ "FROM ExerciseSession es "
+		+ "WHERE es.user.id IN :userIds "
+		+ "GROUP BY es.user.id")
+	List<UserLastSessionProjection> findLatestSessionsByUserIds(@Param("userIds") List<Long> userIds);
+
+	interface UserLastSessionProjection {
+		Long getUserId();
+
+		LocalDateTime getLastCreatedAt();
+	}
 }
