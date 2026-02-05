@@ -56,7 +56,7 @@ public class ExerciseSessionService {
 
 	public ExerciseSessionValidListResponse getValidExerciseSessions(Long userId) {
 		List<ExerciseSessionValidResponse> sessions = exerciseSessionRepository
-			.findByUserIdAndIsRoutineCompletedFalseAndEndAtIsNullOrderByCreatedAtDesc(userId)
+			.findByUserIdAndIsRoutineCompletedIsNullOrderByCreatedAtDesc(userId)
 			.stream()
 			.map(
 				session -> new ExerciseSessionValidResponse(
@@ -86,7 +86,9 @@ public class ExerciseSessionService {
 				() -> new CustomException(ErrorCode.EXERCISE_SESSION_NOT_FOUND)
 			);
 
-		session.updateSession(request.startAt(), request.endAt(), true);
+		long completedCount = countCompletedSteps(request.exerciseResult());
+		boolean hasSuccess = completedCount >= 1;
+		session.updateSession(request.startAt(), request.endAt(), hasSuccess);
 
 		List<ExerciseResult> existingResults = exerciseResultRepository
 			.findByExerciseSessionIdWithDetails(sessionId);
@@ -114,7 +116,6 @@ public class ExerciseSessionService {
 			);
 		}
 
-		long completedCount = countCompletedSteps(request.exerciseResult());
 		int earnedExp = calculateEarnedExp(completedCount);
 		int earnedStatusScore = calculateEarnedStatusScore(completedCount);
 
