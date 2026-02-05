@@ -31,7 +31,7 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
 	);
 
 	@EntityGraph(attributePaths = "routine")
-	List<ExerciseSession> findByUserIdAndIsRoutineCompletedFalseAndEndAtIsNullOrderByCreatedAtDesc(
+	List<ExerciseSession> findByUserIdAndIsRoutineCompletedIsNullOrderByCreatedAtDesc(
 		Long userId);
 
 	@Query("SELECT CASE WHEN COUNT(es) > 0 THEN true ELSE false END "
@@ -51,6 +51,7 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
 		+ "SUM(CASE WHEN es.isRoutineCompleted = true THEN 1 ELSE 0 END) as successCount "
 		+ "FROM ExerciseSession es "
 		+ "WHERE es.user.id = :userId "
+		+ "AND es.isRoutineCompleted IS NOT NULL "
 		+ "AND es.createdAt >= :startDate "
 		+ "AND es.createdAt < :endDate "
 		+ "GROUP BY CAST(es.createdAt AS LocalDate) "
@@ -62,8 +63,20 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
 	);
 
 	@Query("SELECT es FROM ExerciseSession es "
-		+ "WHERE es.isRoutineCompleted = false "
+		+ "WHERE es.isRoutineCompleted IS NULL "
 		+ "AND es.updatedAt = es.createdAt "
 		+ "AND es.createdAt <= :cutoff")
 	List<ExerciseSession> findStaleUnupdatedSessions(@Param("cutoff") LocalDateTime cutoff);
+
+	@Query("SELECT es.user.id as userId, MAX(es.createdAt) as lastCreatedAt "
+		+ "FROM ExerciseSession es "
+		+ "WHERE es.user.id IN :userIds "
+		+ "GROUP BY es.user.id")
+	List<UserLastSessionProjection> findLatestSessionsByUserIds(@Param("userIds") List<Long> userIds);
+
+	interface UserLastSessionProjection {
+		Long getUserId();
+
+		LocalDateTime getLastCreatedAt();
+	}
 }

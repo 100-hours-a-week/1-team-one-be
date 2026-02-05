@@ -4,12 +4,19 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
+import com.google.firebase.messaging.Notification;
+import com.google.firebase.messaging.WebpushConfig;
+import com.google.firebase.messaging.WebpushFcmOptions;
+import com.google.firebase.messaging.WebpushNotification;
 import com.raisedeveloper.server.domain.auth.domain.FcmToken;
 import com.raisedeveloper.server.domain.auth.infra.FcmTokenRepository;
 import com.raisedeveloper.server.domain.exercise.domain.ExerciseSession;
@@ -27,13 +34,21 @@ public class FcmService implements PushService {
 	private final FirebaseMessaging firebaseMessaging;
 	private final FcmTokenRepository fcmTokenRepository;
 
+	@Value("${server.base-url}")
+	private String serverBaseUrl;
+
+	@Value("${storage.gcs.bucket-name:}")
+	private String gcsBucketName;
+
 	@Override
+	@Async("pushExecutor")
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void sendSessionPush(User user, ExerciseSession session) {
 		String title = "운동할 시간이에요";
 		String body = "오늘 루틴을 시작해볼까요?";
 
-		log.info("FCM 세션 알림 전송 - userId: {}, sessionId: {}, routineId: {}",
-			user.getId(), session.getId(), session.getRoutine().getId());
+		log.info("FCM 세션 알림 전송 (비동기) - userId: {}, sessionId: {}, thread: {}",
+			user.getId(), session.getId(), Thread.currentThread().getName());
 
 		FcmToken fcmToken = fcmTokenRepository
 			.findFirstByUserIdAndRevokedAtNull(user.getId())
@@ -47,16 +62,29 @@ public class FcmService implements PushService {
 		}
 
 		try {
-			sendMessageToToken(fcmToken.getToken(), buildSessionData(title, body, session));
+			String link = buildSessionLink(session);
+			String iconUrl = buildIconUrl();
+			sendMessageToToken(fcmToken.getToken(), title, body, buildSessionData(session), link, iconUrl);
 			fcmToken.used();
 			fcmTokenRepository.save(fcmToken);
+
+			log.info("FCM 알림 전송 성공 (비동기) - userId: {}, thread: {}",
+				user.getId(), Thread.currentThread().getName());
 		} catch (FirebaseMessagingException e) {
-			log.error("FCM 알림 전송 실패 - userId: {}, token: {}", user.getId(), fcmToken.getToken(), e);
+			log.error("FCM 알림 전송 실패 - userId: {}, token: {}",
+				user.getId(), fcmToken.getToken(), e);
 			handleSendFailure(fcmToken, e);
 		}
 	}
 
-	private void sendMessageToToken(String token, Map<String, String> data)
+	private void sendMessageToToken(
+		String token,
+		String title,
+		String body,
+		Map<String, String> data,
+		String link,
+		String iconUrl
+	)
 		throws FirebaseMessagingException {
 
 		if (firebaseMessaging == null) {
@@ -66,13 +94,27 @@ public class FcmService implements PushService {
 
 		Message.Builder messageBuilder = Message.builder()
 			.setToken(token)
-			.putAllData(data);
+			.setNotification(Notification.builder()
+				.setTitle(title)
+				.setBody(body)
+				.build());
+
+		messageBuilder.setWebpushConfig(
+			WebpushConfig.builder()
+				.setFcmOptions(WebpushFcmOptions.builder().setLink(link).build())
+				.setNotification(WebpushNotification.builder().setIcon(iconUrl).build())
+				.build()
+		);
+
+		if (data != null && !data.isEmpty()) {
+			messageBuilder.putAllData(data);
+		}
 
 		String response = firebaseMessaging.send(messageBuilder.build());
 		log.info("FCM 알림 전송 성공 - token: {}, response: {}", token, response);
 	}
 
-	private Map<String, String> buildSessionData(String title, String body, ExerciseSession session) {
+	private Map<String, String> buildSessionData(ExerciseSession session) {
 		String timestamp = LocalDateTime.now()
 			.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
@@ -81,10 +123,18 @@ public class FcmService implements PushService {
 			"userId", String.valueOf(session.getUser().getId()),
 			"ts", timestamp,
 			"sessionId", String.valueOf(session.getId()),
-			"routineId", String.valueOf(session.getRoutine().getId()),
-			"title", title,
-			"body", body
+			"routineId", String.valueOf(session.getRoutine().getId())
 		);
+	}
+
+	private String buildSessionLink(ExerciseSession session) {
+		String normalizedBase = serverBaseUrl.endsWith("/") ? serverBaseUrl.substring(0, serverBaseUrl.length() - 1)
+			: serverBaseUrl;
+		return normalizedBase + "/sessions/" + session.getId();
+	}
+
+	private String buildIconUrl() {
+		return "https://storage.googleapis.com/" + gcsBucketName + "/icons/logo-192.png";
 	}
 
 	private void handleSendFailure(FcmToken fcmToken, Exception exception) {
