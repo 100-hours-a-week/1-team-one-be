@@ -6,7 +6,6 @@ import com.raisedeveloper.server.domain.common.domain.CreatedUpdatedEntity;
 import com.raisedeveloper.server.domain.routine.domain.Routine;
 import com.raisedeveloper.server.domain.user.domain.User;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -41,13 +40,11 @@ public class ExerciseSession extends CreatedUpdatedEntity {
 
 	private LocalDateTime endAt;
 
-	@Column(nullable = false)
-	private boolean isRoutineCompleted;
+	private Boolean isRoutineCompleted;
 
 	public ExerciseSession(User user, Routine routine) {
 		this.user = user;
 		this.routine = routine;
-		this.isRoutineCompleted = false;
 	}
 
 	public void sessionCompleted(LocalDateTime startAt, LocalDateTime endAt) {
