@@ -1,5 +1,7 @@
 package com.raisedeveloper.server.domain.push.application;
 
+import static com.raisedeveloper.server.domain.common.MessageConstants.*;
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
@@ -41,9 +43,6 @@ public class FcmService implements PushService {
 	@Override
 	@Async("pushExecutor")
 	public void sendSessionPush(User user, ExerciseSession session) {
-		String title = "운동할 시간이에요";
-		String body = "오늘 루틴을 시작해볼까요?";
-
 		log.info("FCM 세션 알림 전송 (비동기) - userId: {}, sessionId: {}, thread: {}",
 			user.getId(), session.getId(), Thread.currentThread().getName());
 
@@ -61,7 +60,7 @@ public class FcmService implements PushService {
 		try {
 			String link = buildSessionLink(session);
 			String iconUrl = buildIconUrl();
-			sendMessageToToken(fcmToken.getToken(), title, body, buildSessionData(session), link, iconUrl);
+			sendMessageToToken(fcmToken.getToken(), buildSessionData(session), link, iconUrl);
 			fcmTokenTxService.markTokenUsed(fcmToken);
 
 			log.info("FCM 알림 전송 성공 (비동기) - userId: {}, thread: {}",
@@ -75,8 +74,6 @@ public class FcmService implements PushService {
 
 	private void sendMessageToToken(
 		String token,
-		String title,
-		String body,
 		Map<String, String> data,
 		String link,
 		String iconUrl
@@ -91,8 +88,8 @@ public class FcmService implements PushService {
 		Message.Builder messageBuilder = Message.builder()
 			.setToken(token)
 			.setNotification(Notification.builder()
-				.setTitle(title)
-				.setBody(body)
+				.setTitle(SESSION_TITLE)
+				.setBody(SESSION_BODY)
 				.build());
 
 		messageBuilder.setWebpushConfig(
