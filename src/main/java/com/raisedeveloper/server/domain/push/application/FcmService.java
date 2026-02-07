@@ -7,8 +7,6 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
@@ -28,11 +26,11 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class FcmService implements PushService {
 
 	private final FirebaseMessaging firebaseMessaging;
 	private final FcmTokenRepository fcmTokenRepository;
+	private final FcmTokenTxService fcmTokenTxService;
 
 	@Value("${server.base-url}")
 	private String serverBaseUrl;
@@ -42,7 +40,6 @@ public class FcmService implements PushService {
 
 	@Override
 	@Async("pushExecutor")
-	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void sendSessionPush(User user, ExerciseSession session) {
 		String title = "운동할 시간이에요";
 		String body = "오늘 루틴을 시작해볼까요?";
@@ -65,8 +62,7 @@ public class FcmService implements PushService {
 			String link = buildSessionLink(session);
 			String iconUrl = buildIconUrl();
 			sendMessageToToken(fcmToken.getToken(), title, body, buildSessionData(session), link, iconUrl);
-			fcmToken.used();
-			fcmTokenRepository.save(fcmToken);
+			fcmTokenTxService.markTokenUsed(fcmToken);
 
 			log.info("FCM 알림 전송 성공 (비동기) - userId: {}, thread: {}",
 				user.getId(), Thread.currentThread().getName());
@@ -146,8 +142,7 @@ public class FcmService implements PushService {
 			if ("INVALID_ARGUMENT".equals(errorCode) || "UNREGISTERED".equals(errorCode)) {
 				log.warn("유효하지 않은 FCM 토큰 - userId: {}, token: {}, errorCode: {}",
 					fcmToken.getUser().getId(), fcmToken.getToken(), errorCode);
-				fcmToken.revoke();
-				fcmTokenRepository.save(fcmToken);
+				fcmTokenTxService.revokeToken(fcmToken);
 			}
 		}
 	}
