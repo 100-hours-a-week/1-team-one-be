@@ -54,7 +54,7 @@ public class RoutineService {
 
 		List<Long> routineIds = routines.stream().map(Routine::getId).toList();
 		List<RoutineStep> steps = routineStepRepository
-			.findAllByRoutineIdIn(routineIds);
+			.findAllByRoutineIdInOrderByIdAsc(routineIds);
 
 		steps.sort(Comparator.comparingInt(s -> s.getRoutine().getRoutineOrder()));
 
