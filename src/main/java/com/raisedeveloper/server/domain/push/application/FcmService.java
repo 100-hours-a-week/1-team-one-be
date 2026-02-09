@@ -130,7 +130,7 @@ public class FcmService implements PushService {
 	private String buildSessionLink(ExerciseSession session) {
 		String normalizedBase = serverBaseUrl.endsWith("/") ? serverBaseUrl.substring(0, serverBaseUrl.length() - 1)
 			: serverBaseUrl;
-		return normalizedBase + "/sessions/" + session.getId();
+		return normalizedBase + "/stretch/" + session.getId();
 	}
 
 	private String buildIconUrl() {
