@@ -1,13 +1,14 @@
 package com.raisedeveloper.server.domain.exercise.scheduler;
 
-import java.time.DayOfWeek;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
+import java.lang.management.GarbageCollectorMXBean;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
+import java.lang.management.MemoryUsage;
 
 import org.hibernate.SessionFactory;
 import org.hibernate.stat.Statistics;
@@ -16,8 +17,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import com.raisedeveloper.server.domain.exercise.application.ExerciseService;
+import com.raisedeveloper.server.domain.exercise.application.AlarmScheduleService;
 import com.raisedeveloper.server.domain.exercise.domain.ExerciseSession;
-import com.raisedeveloper.server.domain.exercise.infra.ExerciseSessionRepository;
 import com.raisedeveloper.server.domain.push.application.PushService;
 import com.raisedeveloper.server.domain.user.domain.User;
 import com.raisedeveloper.server.domain.user.domain.UserAlarmSettings;
@@ -33,10 +34,12 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class PushAlarmScheduler {
 
+	private static final int DUE_BATCH_SIZE = 500;
+
 	private final UserAlarmSettingsRepository userAlarmSettingsRepository;
-	private final ExerciseSessionRepository exerciseSessionRepository;
 	private final PushService pushService;
 	private final ExerciseService exerciseService;
+	private final AlarmScheduleService alarmScheduleService;
 	@Autowired
 	private EntityManagerFactory entityManagerFactory;
 
@@ -49,43 +52,41 @@ public class PushAlarmScheduler {
 		log.info("========================================");
 		log.info("푸시 알람 스케줄러 시작 - {}", LocalDateTime.now());
 		long startTime = System.currentTimeMillis();
+		logMemoryAndGc("start");
 
-		LocalDateTime now = LocalDateTime.now();
-		LocalTime currentTime = now.toLocalTime();
-		DayOfWeek currentDay = now.getDayOfWeek();
+		LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES);
 
 		long step1Start = System.currentTimeMillis();
 		long queriesBeforeStep1 = statistics.getQueryExecutionCount();
 		long entitiesBeforeStep1 = statistics.getEntityLoadCount();
 
-		List<UserAlarmSettings> eligibleAlarmSettings = userAlarmSettingsRepository
-			.findEligibleAlarmSettings(currentTime, currentDay.name(), now);
-
-		log.info("1단계 데이터 크기 : {}", eligibleAlarmSettings.size());
+		List<Long> dueUserIds = alarmScheduleService.fetchDueUserIds(now, DUE_BATCH_SIZE);
+		log.info("1단계 대상 사용자 수 : {}", dueUserIds.size());
 
 		long step1Time = System.currentTimeMillis() - step1Start;
 		long queriesInStep1 = statistics.getQueryExecutionCount() - queriesBeforeStep1;
 		long entitiesInStep1 = statistics.getEntityLoadCount() - entitiesBeforeStep1;
 
-		log.info("[Step 1] DB 레벨 필터링 완료: {}건, 소요시간: {}ms",
-			eligibleAlarmSettings.size(), step1Time);
-		log.info("[Step 1] 쿼리 수: {}, 엔티티 로드 수: {}",
-			queriesInStep1, entitiesInStep1);
+		log.info("[Step 1] Redis 조회 완료: {}건, 소요시간: {}ms", dueUserIds.size(), step1Time);
+		log.info("[Step 1] 쿼리 수: {}, 엔티티 로드 수: {}", queriesInStep1, entitiesInStep1);
+
+		if (dueUserIds.isEmpty()) {
+			log.info("[Step 1] 처리 대상 없음");
+			return;
+		}
 
 		long step2Start = System.currentTimeMillis();
 		long queriesBeforeStep2 = statistics.getQueryExecutionCount();
 		long entitiesBeforeStep2 = statistics.getEntityLoadCount();
 
-		List<UserAlarmSettings> intervalCheckPassedSettings = filterByInterval(
-			eligibleAlarmSettings, now
-		);
+		List<UserAlarmSettings> settings = userAlarmSettingsRepository.findByUserIdInWithUser(dueUserIds);
 
 		long step2Time = System.currentTimeMillis() - step2Start;
 		long queriesInStep2 = statistics.getQueryExecutionCount() - queriesBeforeStep2;
 		long entitiesInStep2 = statistics.getEntityLoadCount() - entitiesBeforeStep2;
 
-		log.info("[Step 2] Interval 체크 완료: {}건 → {}건, 소요시간: {}ms",
-			eligibleAlarmSettings.size(), intervalCheckPassedSettings.size(), step2Time);
+		log.info("[Step 2] 설정 로드 완료: {}건 → {}건, 소요시간: {}ms",
+			dueUserIds.size(), settings.size(), step2Time);
 		log.info("[Step 2] 쿼리 수: {}, 엔티티 로드 수: {}",
 			queriesInStep2, entitiesInStep2);
 
@@ -93,7 +94,11 @@ public class PushAlarmScheduler {
 		long queriesBeforeStep3 = statistics.getQueryExecutionCount();
 		long entitiesBeforeStep3 = statistics.getEntityLoadCount();
 
-		List<ExerciseSession> createdSessions = createSessions(intervalCheckPassedSettings);
+		List<DueAlarm> dueAlarms = resolveAndReschedule(settings, now);
+		List<UserAlarmSettings> dueSettings = dueAlarms.stream()
+			.map(DueAlarm::settings)
+			.toList();
+		List<ExerciseSession> createdSessions = createSessions(dueSettings);
 
 		long step3Time = System.currentTimeMillis() - step3Start;
 		long queriesInStep3 = statistics.getQueryExecutionCount() - queriesBeforeStep3;
@@ -109,6 +114,7 @@ public class PushAlarmScheduler {
 		long entitiesBeforeStep4 = statistics.getEntityLoadCount();
 
 		sendSessionAlarms(createdSessions);
+		advanceAfterDue(dueAlarms, now);
 
 		long step4Time = System.currentTimeMillis() - step4Start;
 		long queriesInStep4 = statistics.getQueryExecutionCount() - queriesBeforeStep4;
@@ -141,9 +147,41 @@ public class PushAlarmScheduler {
 		log.info("  - 엔티티 로드 수: {}", statistics.getEntityLoadCount());
 		log.info("  - 컬렉션 로드 수: {}", statistics.getCollectionLoadCount());
 		log.info("========================================");
+		logMemoryAndGc("end");
 	}
 
-	private List<UserAlarmSettings> filterByInterval(
+	private void logMemoryAndGc(String phase) {
+		MemoryMXBean memoryMXBean = ManagementFactory.getMemoryMXBean();
+		MemoryUsage heap = memoryMXBean.getHeapMemoryUsage();
+		MemoryUsage nonHeap = memoryMXBean.getNonHeapMemoryUsage();
+		log.info("[{}] Heap used: {}MB, committed: {}MB, max: {}MB",
+			phase,
+			toMB(heap.getUsed()),
+			toMB(heap.getCommitted()),
+			toMB(heap.getMax()));
+		log.info("[{}] Non-Heap used: {}MB, committed: {}MB, max: {}MB",
+			phase,
+			toMB(nonHeap.getUsed()),
+			toMB(nonHeap.getCommitted()),
+			toMB(nonHeap.getMax()));
+
+		for (GarbageCollectorMXBean gc : ManagementFactory.getGarbageCollectorMXBeans()) {
+			log.info("[{}] GC {}: count={}, timeMs={}",
+				phase,
+				gc.getName(),
+				gc.getCollectionCount(),
+				gc.getCollectionTime());
+		}
+	}
+
+	private long toMB(long bytes) {
+		if (bytes < 0) {
+			return -1;
+		}
+		return bytes / (1024 * 1024);
+	}
+
+	private List<DueAlarm> resolveAndReschedule(
 		List<UserAlarmSettings> alarmSettings,
 		LocalDateTime now
 	) {
@@ -151,42 +189,21 @@ public class PushAlarmScheduler {
 			return List.of();
 		}
 
-		// 모든 사용자 ID 추출
-		List<Long> userIds = alarmSettings.stream()
-			.map(settings -> settings.getUser().getId())
-			.toList();
-
-		// Batch로 마지막 세션 조회 (1회 쿼리)
-		Map<Long, LocalDateTime> lastSessionMap = exerciseSessionRepository
-			.findLatestSessionsByUserIds(userIds)
-			.stream()
-			.collect(Collectors.toMap(
-				ExerciseSessionRepository.UserLastSessionProjection::getUserId,
-				ExerciseSessionRepository.UserLastSessionProjection::getLastCreatedAt
-			));
-
-		// Interval 체크
-		return alarmSettings.stream()
-			.filter(settings -> {
-				Long userId = settings.getUser().getId();
-				LocalDateTime lastCreatedAt = lastSessionMap.get(userId);
-
-				// 마지막 세션이 없으면 통과
-				if (lastCreatedAt == null) {
-					return true;
-				}
-
-				// Interval 체크
-				long minutesSinceLastSession = ChronoUnit.MINUTES.between(lastCreatedAt, now);
-				if (minutesSinceLastSession < settings.getAlarmInterval()) {
-					log.debug("알람 간격 미도달로 세션 생성 제외 - userId: {}, minutesSinceLastSession: {}, interval: {}",
-						userId, minutesSinceLastSession, settings.getAlarmInterval());
-					return false;
-				}
-
-				return true;
-			})
-			.toList();
+		List<DueAlarm> dueSettings = new ArrayList<>();
+		for (UserAlarmSettings settings : alarmSettings) {
+			LocalDateTime recalculated = alarmScheduleService.calculateNextFireAt(settings, now);
+			if (recalculated == null) {
+				alarmScheduleService.applyNextFireAt(settings, null);
+				continue;
+			}
+			if (recalculated.isAfter(now)) {
+				alarmScheduleService.applyNextFireAt(settings, recalculated);
+				continue;
+			}
+			LocalDateTime scheduledAt = settings.getNextFireAt() != null ? settings.getNextFireAt() : recalculated;
+			dueSettings.add(new DueAlarm(settings, scheduledAt));
+		}
+		return dueSettings;
 	}
 
 	private List<ExerciseSession> createSessions(List<UserAlarmSettings> alarmSettingsList) {
@@ -195,6 +212,12 @@ public class PushAlarmScheduler {
 			.map(this::tryCreateSession)
 			.flatMap(Optional::stream)
 			.toList();
+	}
+
+	private void advanceAfterDue(List<DueAlarm> dueAlarms, LocalDateTime now) {
+		for (DueAlarm due : dueAlarms) {
+			alarmScheduleService.advanceAfterDue(due.settings(), due.scheduledAt(), now);
+		}
 	}
 
 	private void sendSessionAlarms(List<ExerciseSession> sessions) {
@@ -216,6 +239,9 @@ public class PushAlarmScheduler {
 		} catch (Exception e) {
 			log.error("푸시 알림 전송 실패 - userId: {}, sessionId: {}", user.getId(), session.getId(), e);
 		}
+	}
+
+	private record DueAlarm(UserAlarmSettings settings, LocalDateTime scheduledAt) {
 	}
 
 }

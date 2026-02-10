@@ -46,4 +46,12 @@ public interface UserAlarmSettingsRepository extends JpaRepository<UserAlarmSett
 		@Param("currentDay") String currentDay,
 		@Param("now") LocalDateTime now
 	);
+
+	@Query("SELECT uas FROM UserAlarmSettings uas "
+		+ "JOIN FETCH uas.user u "
+		+ "WHERE u.id IN :userIds")
+	List<UserAlarmSettings> findByUserIdInWithUser(@Param("userIds") List<Long> userIds);
+
+	@Query("SELECT uas FROM UserAlarmSettings uas JOIN FETCH uas.user u")
+	List<UserAlarmSettings> findAllWithUser();
 }
