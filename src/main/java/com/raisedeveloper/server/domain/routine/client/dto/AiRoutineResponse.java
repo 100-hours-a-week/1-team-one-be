@@ -2,19 +2,12 @@ package com.raisedeveloper.server.domain.routine.client.dto;
 
 import java.util.List;
 
+import com.raisedeveloper.server.domain.common.enums.RoutineGenerationJobStatus;
+
 public record AiRoutineResponse(
-	String taskId,
-	String status,
-	Integer progress,
-	String currentStep,
-	AiSummary summary,
-	String errorMessage,
-	String completedAt,
+	RoutineGenerationJobStatus status,
 	List<AiRoutineDto> routines
 ) {
-	public boolean isCompleted() {
-		return "COMPLETED".equals(status);
-	}
 
 	public boolean hasRoutines() {
 		return routines != null && !routines.isEmpty();
