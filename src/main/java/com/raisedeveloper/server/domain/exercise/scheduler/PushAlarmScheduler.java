@@ -5,10 +5,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.lang.management.GarbageCollectorMXBean;
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryMXBean;
-import java.lang.management.MemoryUsage;
 
 import org.hibernate.SessionFactory;
 import org.hibernate.stat.Statistics;
@@ -16,8 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import com.raisedeveloper.server.domain.exercise.application.ExerciseService;
 import com.raisedeveloper.server.domain.exercise.application.AlarmScheduleService;
+import com.raisedeveloper.server.domain.exercise.application.ExerciseService;
 import com.raisedeveloper.server.domain.exercise.domain.ExerciseSession;
 import com.raisedeveloper.server.domain.push.application.PushService;
 import com.raisedeveloper.server.domain.user.domain.User;
@@ -52,7 +48,6 @@ public class PushAlarmScheduler {
 		log.info("========================================");
 		log.info("푸시 알람 스케줄러 시작 - {}", LocalDateTime.now());
 		long startTime = System.currentTimeMillis();
-		logMemoryAndGc("start");
 
 		LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES);
 
@@ -139,7 +134,6 @@ public class PushAlarmScheduler {
 			step4Time, String.format("%.1f", step4Time * 100.0 / totalTime));
 		log.info("========================================");
 
-		// 총 통계 출력
 		log.info("========================================");
 		log.info("[전체 쿼리 통계]");
 		log.info("  - 총 쿼리 수: {}", statistics.getQueryExecutionCount());
@@ -147,38 +141,6 @@ public class PushAlarmScheduler {
 		log.info("  - 엔티티 로드 수: {}", statistics.getEntityLoadCount());
 		log.info("  - 컬렉션 로드 수: {}", statistics.getCollectionLoadCount());
 		log.info("========================================");
-		logMemoryAndGc("end");
-	}
-
-	private void logMemoryAndGc(String phase) {
-		MemoryMXBean memoryMXBean = ManagementFactory.getMemoryMXBean();
-		MemoryUsage heap = memoryMXBean.getHeapMemoryUsage();
-		MemoryUsage nonHeap = memoryMXBean.getNonHeapMemoryUsage();
-		log.info("[{}] Heap used: {}MB, committed: {}MB, max: {}MB",
-			phase,
-			toMB(heap.getUsed()),
-			toMB(heap.getCommitted()),
-			toMB(heap.getMax()));
-		log.info("[{}] Non-Heap used: {}MB, committed: {}MB, max: {}MB",
-			phase,
-			toMB(nonHeap.getUsed()),
-			toMB(nonHeap.getCommitted()),
-			toMB(nonHeap.getMax()));
-
-		for (GarbageCollectorMXBean gc : ManagementFactory.getGarbageCollectorMXBeans()) {
-			log.info("[{}] GC {}: count={}, timeMs={}",
-				phase,
-				gc.getName(),
-				gc.getCollectionCount(),
-				gc.getCollectionTime());
-		}
-	}
-
-	private long toMB(long bytes) {
-		if (bytes < 0) {
-			return -1;
-		}
-		return bytes / (1024 * 1024);
 	}
 
 	private List<DueAlarm> resolveAndReschedule(
@@ -243,5 +205,4 @@ public class PushAlarmScheduler {
 
 	private record DueAlarm(UserAlarmSettings settings, LocalDateTime scheduledAt) {
 	}
-
 }
