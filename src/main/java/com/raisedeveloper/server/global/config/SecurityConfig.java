@@ -58,7 +58,8 @@ public class SecurityConfig {
 					"/health",
 					"/actuator/**",
 					"/exercises",
-					"/images/upload-url/profile"
+					"/images/upload-url/profile",
+					"/routines/callback"
 				).permitAll()
 				.requestMatchers("/admin/**").hasRole("ADMIN")
 				.anyRequest().authenticated()
