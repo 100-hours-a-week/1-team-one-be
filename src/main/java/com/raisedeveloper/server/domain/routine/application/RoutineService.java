@@ -19,9 +19,11 @@ import com.raisedeveloper.server.domain.routine.client.dto.AiRoutineDto;
 import com.raisedeveloper.server.domain.routine.client.dto.AiRoutineResponse;
 import com.raisedeveloper.server.domain.routine.client.dto.AiRoutineStepDto;
 import com.raisedeveloper.server.domain.routine.domain.Routine;
+import com.raisedeveloper.server.domain.routine.domain.RoutineGenerationJob;
 import com.raisedeveloper.server.domain.routine.domain.RoutineStep;
 import com.raisedeveloper.server.domain.routine.dto.RoutineExerciseResponse;
 import com.raisedeveloper.server.domain.routine.dto.RoutinePlanResponse;
+import com.raisedeveloper.server.domain.routine.infra.RoutineGenerationJobRepository;
 import com.raisedeveloper.server.domain.routine.infra.RoutineRepository;
 import com.raisedeveloper.server.domain.routine.infra.RoutineStepRepository;
 import com.raisedeveloper.server.domain.survey.domain.SurveySubmission;
@@ -40,6 +42,7 @@ public class RoutineService {
 
 	private final RoutineRepository routineRepository;
 	private final RoutineStepRepository routineStepRepository;
+	private final RoutineGenerationJobRepository routineGenerationJobRepository;
 	private final UserRepository userRepository;
 	private final ExerciseRepository exerciseRepository;
 
@@ -49,37 +52,64 @@ public class RoutineService {
 		);
 
 		List<Routine> routines = routineRepository.findAllByUserIdAndIsActiveTrue(userId);
-		if (routines.isEmpty()) {
-			throw new CustomException(ErrorCode.ROUTINE_NOT_FOUND);
-		}
 
-		List<Long> routineIds = routines.stream().map(Routine::getId).toList();
-		List<RoutineStep> steps = routineStepRepository
-			.findAllByRoutineIdInOrderByIdAsc(routineIds);
+		Long activeSubmissionId = null;
+		List<RoutineExerciseResponse> exercises = List.of();
 
-		steps.sort(Comparator.comparingInt(s -> s.getRoutine().getRoutineOrder()));
+		if (!routines.isEmpty()) {
+			List<Long> routineIds = routines.stream().map(Routine::getId).toList();
+			List<RoutineStep> steps = routineStepRepository
+				.findAllByRoutineIdInOrderByIdAsc(routineIds);
 
-		Map<Long, RoutineExerciseResponse> uniqueExercises = new LinkedHashMap<>();
-		Routine primaryRoutine = null;
+			steps.sort(Comparator.comparingInt(s -> s.getRoutine().getRoutineOrder()));
 
-		for (RoutineStep step : steps) {
-			Exercise exercise = step.getExercise();
-			Routine routine = step.getRoutine();
+			Map<Long, RoutineExerciseResponse> uniqueExercises = new LinkedHashMap<>();
+			Routine primaryRoutine = null;
 
-			if (primaryRoutine == null) {
-				primaryRoutine = routine;
+			for (RoutineStep step : steps) {
+				Exercise exercise = step.getExercise();
+				Routine routine = step.getRoutine();
+
+				if (primaryRoutine == null) {
+					primaryRoutine = routine;
+				}
+
+				uniqueExercises.putIfAbsent(
+					exercise.getId(),
+					toExerciseResponse(exercise, routine.getReason())
+				);
 			}
 
-			uniqueExercises.putIfAbsent(
-				exercise.getId(),
-				toExerciseResponse(exercise, routine.getReason())
+			if (primaryRoutine != null) {
+				activeSubmissionId = primaryRoutine.getSurveySubmission().getId();
+			}
+			exercises = List.copyOf(uniqueExercises.values());
+		}
+
+		RoutineGenerationJob latestJob = routineGenerationJobRepository
+			.findTopByUserIdOrderByIdDesc(userId)
+			.orElse(null);
+
+		if (latestJob == null) {
+			if (routines.isEmpty()) {
+				throw new CustomException(ErrorCode.ROUTINE_NOT_FOUND);
+			}
+			return new RoutinePlanResponse(
+				RoutineGenerationJobStatus.COMPLETED,
+				activeSubmissionId,
+				activeSubmissionId,
+				exercises
 			);
 		}
 
+		Long generatingSubmissionId = latestJob.getSurveySubmission().getId();
+		RoutineGenerationJobStatus status = latestJob.getStatus();
+
 		return new RoutinePlanResponse(
-			primaryRoutine.getStatus(),
-			primaryRoutine.getSurveySubmission().getId(),
-			List.copyOf(uniqueExercises.values())
+			status,
+			activeSubmissionId,
+			generatingSubmissionId,
+			exercises
 		);
 	}
 
