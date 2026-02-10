@@ -14,9 +14,9 @@ import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
+import com.raisedeveloper.server.domain.routine.client.dto.AiRoutineAsyncRequest;
 import com.raisedeveloper.server.domain.routine.client.dto.AiRoutineRequest;
 import com.raisedeveloper.server.domain.routine.client.dto.AiRoutineResponse;
-import com.raisedeveloper.server.domain.routine.client.dto.AiRoutineAsyncRequest;
 import com.raisedeveloper.server.domain.routine.client.dto.AiSurveyData;
 import com.raisedeveloper.server.domain.routine.client.dto.AiSurveyQuestion;
 import com.raisedeveloper.server.global.exception.CustomException;
