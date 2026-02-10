@@ -1,5 +1,7 @@
 package com.raisedeveloper.server.domain.push.application;
 
+import static com.raisedeveloper.server.domain.common.MessageConstants.*;
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
@@ -7,8 +9,6 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
@@ -28,11 +28,11 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class FcmService implements PushService {
 
 	private final FirebaseMessaging firebaseMessaging;
 	private final FcmTokenRepository fcmTokenRepository;
+	private final FcmTokenTxService fcmTokenTxService;
 
 	@Value("${server.base-url}")
 	private String serverBaseUrl;
@@ -42,11 +42,7 @@ public class FcmService implements PushService {
 
 	@Override
 	@Async("pushExecutor")
-	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void sendSessionPush(User user, ExerciseSession session) {
-		String title = "운동할 시간이에요";
-		String body = "오늘 루틴을 시작해볼까요?";
-
 		log.info("FCM 세션 알림 전송 (비동기) - userId: {}, sessionId: {}, thread: {}",
 			user.getId(), session.getId(), Thread.currentThread().getName());
 
@@ -64,9 +60,8 @@ public class FcmService implements PushService {
 		try {
 			String link = buildSessionLink(session);
 			String iconUrl = buildIconUrl();
-			sendMessageToToken(fcmToken.getToken(), title, body, buildSessionData(session), link, iconUrl);
-			fcmToken.used();
-			fcmTokenRepository.save(fcmToken);
+			sendMessageToToken(fcmToken.getToken(), buildSessionData(session), link, iconUrl);
+			fcmTokenTxService.markTokenUsed(fcmToken);
 
 			log.info("FCM 알림 전송 성공 (비동기) - userId: {}, thread: {}",
 				user.getId(), Thread.currentThread().getName());
@@ -79,8 +74,6 @@ public class FcmService implements PushService {
 
 	private void sendMessageToToken(
 		String token,
-		String title,
-		String body,
 		Map<String, String> data,
 		String link,
 		String iconUrl
@@ -95,8 +88,8 @@ public class FcmService implements PushService {
 		Message.Builder messageBuilder = Message.builder()
 			.setToken(token)
 			.setNotification(Notification.builder()
-				.setTitle(title)
-				.setBody(body)
+				.setTitle(SESSION_TITLE)
+				.setBody(SESSION_BODY)
 				.build());
 
 		messageBuilder.setWebpushConfig(
@@ -130,7 +123,7 @@ public class FcmService implements PushService {
 	private String buildSessionLink(ExerciseSession session) {
 		String normalizedBase = serverBaseUrl.endsWith("/") ? serverBaseUrl.substring(0, serverBaseUrl.length() - 1)
 			: serverBaseUrl;
-		return normalizedBase + "/sessions/" + session.getId();
+		return normalizedBase + "/stretch/" + session.getId();
 	}
 
 	private String buildIconUrl() {
@@ -146,8 +139,7 @@ public class FcmService implements PushService {
 			if ("INVALID_ARGUMENT".equals(errorCode) || "UNREGISTERED".equals(errorCode)) {
 				log.warn("유효하지 않은 FCM 토큰 - userId: {}, token: {}, errorCode: {}",
 					fcmToken.getUser().getId(), fcmToken.getToken(), errorCode);
-				fcmToken.revoke();
-				fcmTokenRepository.save(fcmToken);
+				fcmTokenTxService.revokeToken(fcmToken);
 			}
 		}
 	}
