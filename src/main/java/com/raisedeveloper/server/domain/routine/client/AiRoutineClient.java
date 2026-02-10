@@ -16,6 +16,7 @@ import org.springframework.web.client.RestTemplate;
 
 import com.raisedeveloper.server.domain.routine.client.dto.AiRoutineRequest;
 import com.raisedeveloper.server.domain.routine.client.dto.AiRoutineResponse;
+import com.raisedeveloper.server.domain.routine.client.dto.AiRoutineAsyncRequest;
 import com.raisedeveloper.server.domain.routine.client.dto.AiSurveyData;
 import com.raisedeveloper.server.domain.routine.client.dto.AiSurveyQuestion;
 import com.raisedeveloper.server.global.exception.CustomException;
@@ -37,6 +38,9 @@ public class AiRoutineClient {
 
 	@Value("${ai.server.api.routines-path}")
 	private String routinesPath;
+
+	@Value("${ai.server.api.routines-async-path}")
+	private String routinesAsyncPath;
 
 	@Value("${ai.server.routine-count}")
 	private int routineCount;
@@ -105,6 +109,47 @@ public class AiRoutineClient {
 		}
 	}
 
+	public void requestRoutineGenerationAsync(
+		AiRoutineAsyncRequest request
+	) {
+		String url = baseUrl + routinesAsyncPath;
+
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+
+		HttpEntity<AiRoutineAsyncRequest> entity = new HttpEntity<>(request, headers);
+
+		try {
+			log.info("AI 서버 비동기 루틴 생성 요청 시작: taskId={}, url={}",
+				request.taskId(), url);
+
+			aiServerRestTemplate.postForEntity(url, entity, Void.class);
+
+			log.info("AI 서버 비동기 루틴 생성 요청 완료: taskId={}", request.taskId());
+
+		} catch (ResourceAccessException e) {
+			log.error("AI 서버 연결 실패: url={}", url, e);
+			throw new CustomException(ErrorCode.AI_SERVER_CONNECTION_FAILED);
+
+		} catch (HttpClientErrorException | HttpServerErrorException e) {
+			log.error("AI 서버 HTTP 오류: statusCode={}, responseBody={}",
+				e.getStatusCode(), e.getResponseBodyAsString(), e);
+
+			if (e.getStatusCode().is5xxServerError()) {
+				throw new CustomException(ErrorCode.AI_SERVER_ERROR);
+			}
+
+			throw new CustomException(
+				ErrorCode.AI_ROUTINE_GENERATION_FAILED,
+				List.of(ErrorDetail.field("aiServerError", e.getStatusCode().toString()))
+			);
+
+		} catch (Exception e) {
+			log.error("AI 서버 비동기 요청 중 예상치 못한 오류 발생", e);
+			throw new CustomException(ErrorCode.AI_ROUTINE_GENERATION_FAILED);
+		}
+	}
+
 	private AiRoutineRequest buildRequest(
 		List<AiSurveyQuestion> aiSurveyQuestions
 	) {
@@ -114,6 +159,23 @@ public class AiRoutineClient {
 		);
 
 		return new AiRoutineRequest(
+			surveyData
+		);
+	}
+
+	public AiRoutineAsyncRequest buildAsyncRequest(
+		String taskId,
+		Long userId,
+		List<AiSurveyQuestion> aiSurveyQuestions
+	) {
+		AiSurveyData surveyData = new AiSurveyData(
+			routineCount,
+			aiSurveyQuestions
+		);
+
+		return new AiRoutineAsyncRequest(
+			taskId,
+			userId,
 			surveyData
 		);
 	}
