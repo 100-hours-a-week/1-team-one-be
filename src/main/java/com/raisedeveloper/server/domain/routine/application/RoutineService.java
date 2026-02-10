@@ -10,6 +10,7 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.raisedeveloper.server.domain.common.enums.RoutineGenerationJobStatus;
 import com.raisedeveloper.server.domain.common.enums.RoutineStatus;
 import com.raisedeveloper.server.domain.exercise.domain.Exercise;
 import com.raisedeveloper.server.domain.exercise.domain.ExerciseType;
@@ -134,10 +135,10 @@ public class RoutineService {
 	}
 
 	private void validateAiResponse(AiRoutineResponse response) {
-		if (!response.isCompleted()) {
+		if (response.status() != RoutineGenerationJobStatus.COMPLETED) {
 			throw new CustomException(
 				ErrorCode.AI_ROUTINE_NOT_COMPLETED,
-				List.of(ErrorDetail.field("status", response.status()))
+				List.of(ErrorDetail.field("status", response.status().toString()))
 			);
 		}
 

@@ -30,7 +30,7 @@ public class SurveyController {
 	}
 
 	@PostMapping("/survey-submission")
-	@ResponseStatus(HttpStatus.CREATED)
+	@ResponseStatus(HttpStatus.ACCEPTED)
 	public ApiResponse<SurveySubmissionResponse> submitSurvey(
 		@Valid @RequestBody SurveySubmissionRequest request
 	) {
