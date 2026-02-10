@@ -53,6 +53,8 @@ public class UserAlarmSettings extends CreatedUpdatedEntity {
 
 	private LocalDateTime dndFinishedAt;
 
+	private LocalDateTime nextFireAt;
+
 	public UserAlarmSettings(
 		User user,
 		short interval,
@@ -91,5 +93,9 @@ public class UserAlarmSettings extends CreatedUpdatedEntity {
 	public void enableDnd(LocalDateTime dndFinishedAt) {
 		this.dnd = true;
 		this.dndFinishedAt = dndFinishedAt;
+	}
+
+	public void updateNextFireAt(LocalDateTime nextFireAt) {
+		this.nextFireAt = nextFireAt;
 	}
 }
