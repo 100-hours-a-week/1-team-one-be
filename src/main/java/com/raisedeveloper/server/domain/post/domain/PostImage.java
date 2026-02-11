@@ -1,6 +1,6 @@
 package com.raisedeveloper.server.domain.post.domain;
 
-import com.raisedeveloper.server.domain.common.domain.SoftDeleteEntity;
+import com.raisedeveloper.server.domain.common.domain.CreatedUpdatedEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -19,7 +19,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "post_images")
-public class PostImage extends SoftDeleteEntity {
+public class PostImage extends CreatedUpdatedEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -8,7 +8,7 @@ import com.raisedeveloper.server.domain.post.domain.PostImage;
 
 public interface PostImageRepository extends JpaRepository<PostImage, Long> {
 
-	List<PostImage> findByPostIdAndDeletedAtIsNull(Long postId);
+	List<PostImage> findByPostIdOrderBySortOrderAsc(Long postId);
 
-	List<PostImage> findByPostIdAndDeletedAtIsNullOrderBySortOrderAsc(Long postId);
+	void deleteAllByPostId(Long postId);
 }

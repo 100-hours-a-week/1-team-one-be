@@ -115,7 +115,7 @@ public class PostService {
 		validateAuthor(post, userId);
 
 		post.softDelete(LocalDateTime.now());
-		softDeletePostImages(post.getId());
+		postImageRepository.deleteAllByPostId(post.getId());
 		postTagRepository.deleteAllByPostId(post.getId());
 	}
 
@@ -137,7 +137,7 @@ public class PostService {
 	}
 
 	private void replacePostImages(Post post, List<String> imagePaths) {
-		softDeletePostImages(post.getId());
+		postImageRepository.deleteAllByPostId(post.getId());
 		if (imagePaths.isEmpty()) {
 			return;
 		}
@@ -153,7 +153,7 @@ public class PostService {
 
 	private void updatePostImagesIfChanged(Post post, List<String> imagePaths) {
 		List<String> existingImagePaths = postImageRepository
-			.findByPostIdAndDeletedAtIsNullOrderBySortOrderAsc(post.getId())
+			.findByPostIdOrderBySortOrderAsc(post.getId())
 			.stream()
 			.map(PostImage::getImagePath)
 			.toList();
@@ -161,15 +161,6 @@ public class PostService {
 			return;
 		}
 		replacePostImages(post, imagePaths);
-	}
-
-	private void softDeletePostImages(Long postId) {
-		List<PostImage> existingImages = postImageRepository.findByPostIdAndDeletedAtIsNull(postId);
-		if (existingImages.isEmpty()) {
-			return;
-		}
-		LocalDateTime now = LocalDateTime.now();
-		existingImages.forEach(image -> image.softDelete(now));
 	}
 
 	private void replacePostTags(Post post, List<String> tagNamesRaw) {
