@@ -2,7 +2,6 @@ package com.raisedeveloper.server.domain.exercise.scheduler;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -89,11 +88,7 @@ public class PushAlarmScheduler {
 		long queriesBeforeStep3 = statistics.getQueryExecutionCount();
 		long entitiesBeforeStep3 = statistics.getEntityLoadCount();
 
-		List<DueAlarm> dueAlarms = resolveAndReschedule(settings, now);
-		List<UserAlarmSettings> dueSettings = dueAlarms.stream()
-			.map(DueAlarm::settings)
-			.toList();
-		List<ExerciseSession> createdSessions = createSessions(dueSettings);
+		List<ExerciseSession> createdSessions = createSessions(settings);
 
 		long step3Time = System.currentTimeMillis() - step3Start;
 		long queriesInStep3 = statistics.getQueryExecutionCount() - queriesBeforeStep3;
@@ -109,7 +104,7 @@ public class PushAlarmScheduler {
 		long entitiesBeforeStep4 = statistics.getEntityLoadCount();
 
 		sendSessionAlarms(createdSessions);
-		advanceAfterDue(dueAlarms, now);
+		advanceAfterDue(settings);
 
 		long step4Time = System.currentTimeMillis() - step4Start;
 		long queriesInStep4 = statistics.getQueryExecutionCount() - queriesBeforeStep4;
@@ -143,31 +138,6 @@ public class PushAlarmScheduler {
 		log.info("========================================");
 	}
 
-	private List<DueAlarm> resolveAndReschedule(
-		List<UserAlarmSettings> alarmSettings,
-		LocalDateTime now
-	) {
-		if (alarmSettings.isEmpty()) {
-			return List.of();
-		}
-
-		List<DueAlarm> dueSettings = new ArrayList<>();
-		for (UserAlarmSettings settings : alarmSettings) {
-			LocalDateTime recalculated = alarmScheduleService.calculateNextFireAt(settings, now);
-			if (recalculated == null) {
-				alarmScheduleService.applyNextFireAt(settings, null);
-				continue;
-			}
-			if (recalculated.isAfter(now)) {
-				alarmScheduleService.applyNextFireAt(settings, recalculated);
-				continue;
-			}
-			LocalDateTime scheduledAt = settings.getNextFireAt() != null ? settings.getNextFireAt() : recalculated;
-			dueSettings.add(new DueAlarm(settings, scheduledAt));
-		}
-		return dueSettings;
-	}
-
 	private List<ExerciseSession> createSessions(List<UserAlarmSettings> alarmSettingsList) {
 		return alarmSettingsList.stream()
 			.map(UserAlarmSettings::getUser)
@@ -176,9 +146,13 @@ public class PushAlarmScheduler {
 			.toList();
 	}
 
-	private void advanceAfterDue(List<DueAlarm> dueAlarms, LocalDateTime now) {
-		for (DueAlarm due : dueAlarms) {
-			alarmScheduleService.advanceAfterDue(due.settings(), due.scheduledAt(), now);
+	private void advanceAfterDue(List<UserAlarmSettings> dueSettings) {
+		for (UserAlarmSettings settings : dueSettings) {
+			LocalDateTime scheduledAt = settings.getNextFireAt();
+			if (scheduledAt == null) {
+				continue;
+			}
+			alarmScheduleService.advanceAfterDue(settings, scheduledAt);
 		}
 	}
 
@@ -201,8 +175,5 @@ public class PushAlarmScheduler {
 		} catch (Exception e) {
 			log.error("푸시 알림 전송 실패 - userId: {}, sessionId: {}", user.getId(), session.getId(), e);
 		}
-	}
-
-	private record DueAlarm(UserAlarmSettings settings, LocalDateTime scheduledAt) {
 	}
 }

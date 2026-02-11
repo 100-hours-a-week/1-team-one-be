@@ -87,14 +87,14 @@ public class AlarmScheduleService {
 	}
 
 	@Transactional
-	public void advanceAfterDue(UserAlarmSettings settings, LocalDateTime scheduledAt, LocalDateTime now) {
-		LocalDateTime nextFireAt = calculateNextFireAt(settings, now);
+	public void advanceAfterDue(UserAlarmSettings settings, LocalDateTime scheduledAt) {
+		LocalDateTime nextFireAt = calculateNextFireAt(settings, scheduledAt);
 		applyNextFireAt(settings, nextFireAt);
 	}
 
 	public LocalDateTime calculateNextFireAt(
 		UserAlarmSettings settings,
-		LocalDateTime now
+		LocalDateTime baseTime
 	) {
 		if (settings == null) {
 			return null;
@@ -105,7 +105,7 @@ public class AlarmScheduleService {
 			return null;
 		}
 
-		LocalDateTime nextFireAt = now.truncatedTo(ChronoUnit.MINUTES)
+		LocalDateTime nextFireAt = baseTime.truncatedTo(ChronoUnit.MINUTES)
 			.plusMinutes(settings.getAlarmInterval());
 
 		if (settings.isDnd()) {
