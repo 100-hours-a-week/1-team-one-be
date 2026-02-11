@@ -1,9 +1,8 @@
 package com.raisedeveloper.server.domain.notification.dto;
 
-import java.time.LocalDateTime;
-
-import com.fasterxml.jackson.annotation.JsonFormat;
 import static com.raisedeveloper.server.global.exception.ErrorMessageConstants.*;
+
+import java.time.LocalDateTime;
 
 import jakarta.validation.constraints.NotNull;
 

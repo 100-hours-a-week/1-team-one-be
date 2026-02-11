@@ -1,5 +1,7 @@
 package com.raisedeveloper.server.domain.auth.application;
 
+import static com.raisedeveloper.server.global.exception.ErrorMessageConstants.*;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -29,7 +31,6 @@ import com.raisedeveloper.server.global.security.jwt.JwtClaims;
 import com.raisedeveloper.server.global.security.jwt.JwtTokenProvider;
 import com.raisedeveloper.server.global.security.jwt.TokenResult;
 import com.raisedeveloper.server.global.security.jwt.TokenType;
-import static com.raisedeveloper.server.global.exception.ErrorMessageConstants.*;
 
 import lombok.RequiredArgsConstructor;
 

@@ -1,7 +1,7 @@
 package com.raisedeveloper.server.domain.user.dto;
 
-import static com.raisedeveloper.server.global.validation.RegexPatterns.*;
 import static com.raisedeveloper.server.global.exception.ErrorMessageConstants.*;
+import static com.raisedeveloper.server.global.validation.RegexPatterns.*;
 
 import java.time.LocalTime;
 import java.util.List;

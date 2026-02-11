@@ -1,10 +1,11 @@
 package com.raisedeveloper.server.domain.exercise.dto;
 
+import static com.raisedeveloper.server.global.exception.ErrorMessageConstants.*;
+
 import java.time.LocalDateTime;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.raisedeveloper.server.domain.exercise.enums.ExerciseResultStatus;
-import static com.raisedeveloper.server.global.exception.ErrorMessageConstants.*;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;

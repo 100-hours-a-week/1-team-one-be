@@ -1,9 +1,9 @@
 package com.raisedeveloper.server.domain.exercise.dto;
 
+import static com.raisedeveloper.server.global.exception.ErrorMessageConstants.*;
+
 import java.time.LocalDateTime;
 import java.util.List;
-
-import static com.raisedeveloper.server.global.exception.ErrorMessageConstants.*;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;

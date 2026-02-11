@@ -126,13 +126,8 @@ public class JwtTokenProvider {
 			return Jwts.parser().verifyWith(secretKey).requireIssuer(issuer).build().parseSignedClaims(token);
 		} catch (ExpiredJwtException e) {
 			throw new CustomException(expiredCode);
-		} catch (UnsupportedJwtException e) {
-			throw new CustomException(invalidCode);
-		} catch (MalformedJwtException e) {
-			throw new CustomException(invalidCode);
-		} catch (SecurityException | SignatureException e) {
-			throw new CustomException(invalidCode);
-		} catch (IllegalArgumentException e) {
+		} catch (UnsupportedJwtException | MalformedJwtException | SecurityException
+				 | SignatureException | IllegalArgumentException e) {
 			throw new CustomException(invalidCode);
 		}
 	}
