@@ -88,7 +88,9 @@ public class AlarmScheduleService {
 
 	@Transactional
 	public void advanceAfterDue(UserAlarmSettings settings, LocalDateTime scheduledAt) {
-		LocalDateTime nextFireAt = calculateNextFireAt(settings, scheduledAt);
+		LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES);
+		LocalDateTime base = scheduledAt == null || scheduledAt.isBefore(now) ? now : scheduledAt;
+		LocalDateTime nextFireAt = calculateNextFireAt(settings, base);
 		applyNextFireAt(settings, nextFireAt);
 	}
 
@@ -142,13 +144,19 @@ public class AlarmScheduleService {
 		}
 
 		if (!inActive) {
+			if (candidate.isAfter(activeEnd)) {
+				return moveToNextRepeatDay(nextFireAt.toLocalDate(), repeatDays, activeStart);
+			}
+
 			LocalDateTime shifted = LocalDateTime.of(nextFireAt.toLocalDate(), activeStart)
 				.plusMinutes(settings.getAlarmInterval());
+
 			if (shifted.toLocalTime().isAfter(activeEnd)) {
 				return moveToNextRepeatDay(nextFireAt.toLocalDate(), repeatDays, activeStart);
 			}
 			return shifted;
 		}
+
 
 		LocalTime afterFocus = focusEnd.plusMinutes(settings.getAlarmInterval());
 		if (!afterFocus.isBefore(activeStart) && !afterFocus.isAfter(activeEnd)) {
