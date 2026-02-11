@@ -1,5 +1,7 @@
 package com.raisedeveloper.server.global.exception;
 
+import static com.raisedeveloper.server.global.exception.ErrorMessageConstants.*;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -71,7 +73,10 @@ public enum ErrorCode {
 	AI_ROUTINE_EXERCISE_ID_MISSING(400, "AI_ROUTINE_EXERCISE_ID_MISSING", "운동 ID가 누락되었습니다"),
 	AI_ROUTINE_TARGET_REPS_MISSING(400, "AI_ROUTINE_TARGET_REPS_MISSING", "목표 반복 횟수가 누락되었습니다"),
 	AI_ROUTINE_DURATION_TIME_MISSING(400, "AI_ROUTINE_DURATION_TIME_MISSING", "운동 지속 시간이 누락되었습니다"),
-	AI_ROUTINE_GENERATION_FAILED(500, "AI_ROUTINE_GENERATION_FAILED", "AI 루틴 생성에 실패했습니다");
+	AI_ROUTINE_GENERATION_FAILED(500, "AI_ROUTINE_GENERATION_FAILED", "AI 루틴 생성에 실패했습니다"),
+
+	// post domain
+	POST_NOT_FOUND(404, "POST_NOT_FOUND", POST_NOT_FOUND_MESSAGE);
 
 	private final int httpStatusCode;
 	private final String code;

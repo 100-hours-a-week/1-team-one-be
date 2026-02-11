@@ -49,10 +49,9 @@ public class Post extends SoftDeleteEntity {
 		this.likeCount = 0;
 	}
 
-	public Post(User user, String title, String content) {
-		this.user = user;
+	public void update(String title, String content, String thumbnailImagePath) {
 		this.title = title;
 		this.content = content;
-		this.likeCount = 0;
+		this.thumbnailImagePath = thumbnailImagePath;
 	}
 }
