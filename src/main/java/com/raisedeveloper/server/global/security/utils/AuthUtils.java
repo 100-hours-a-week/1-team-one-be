@@ -18,16 +18,16 @@ public class AuthUtils {
 		}
 		Object details = authentication.getDetails();
 		if (!(details instanceof Map<?, ?> detailsMap)) {
-			throw new CustomException(ErrorCode.INVALID_TOKEN);
+			throw new CustomException(ErrorCode.ACCESS_TOKEN_INVALID);
 		}
 		Object tokenType = detailsMap.get("tokenType");
 		if (tokenType != TokenType.ACCESS) {
-			throw new CustomException(ErrorCode.INVALID_TOKEN);
+			throw new CustomException(ErrorCode.ACCESS_TOKEN_INVALID);
 		}
 		Object userId = detailsMap.get("userId");
 		if (userId instanceof Long id) {
 			return id;
 		}
-		throw new CustomException(ErrorCode.INVALID_TOKEN);
+		throw new CustomException(ErrorCode.ACCESS_TOKEN_INVALID);
 	}
 }
