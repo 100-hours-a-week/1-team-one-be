@@ -11,6 +11,8 @@ public final class ErrorMessageConstants {
 	public static final String ACCESS_DENIED_MESSAGE = "접근 권한이 없습니다.";
 	public static final String VALIDATION_FAILED_MESSAGE = "요청 값 검증에 실패했습니다.";
 	public static final String INTERNAL_SERVER_ERROR_MESSAGE = "서버 내부 오류가 발생했습니다.";
+	public static final String RESOURCE_NOT_FOUND_MESSAGE = "요청한 리소스를 찾을 수 없습니다.";
+	public static final String UNSUPPORTED_MEDIA_TYPE_MESSAGE = "지원하지 않는 Content-Type 입니다.";
 
 	// JWT / Auth (error reasons)
 	public static final String ACCESS_TOKEN_MISSING_MESSAGE = "인증 토큰이 없습니다.";

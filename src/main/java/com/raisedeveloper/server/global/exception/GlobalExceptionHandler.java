@@ -10,9 +10,11 @@ import org.springframework.validation.BindException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
@@ -103,6 +105,26 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(HttpRequestMethodNotSupportedException.class)
 	public ResponseEntity<ApiResponse<Void>> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
 		ErrorCode errorCode = ErrorCode.METHOD_NOT_ALLOWED;
+		return ResponseEntity.status(errorCode.getHttpStatusCode())
+			.body(ApiResponse.fail(
+				errorCode.getCode(),
+				List.of(ErrorDetail.reasonOnly(errorCode.getReason()))
+			));
+	}
+
+	@ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+	public ResponseEntity<ApiResponse<Void>> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex) {
+		ErrorCode errorCode = ErrorCode.UNSUPPORTED_MEDIA_TYPE;
+		return ResponseEntity.status(errorCode.getHttpStatusCode())
+			.body(ApiResponse.fail(
+				errorCode.getCode(),
+				List.of(ErrorDetail.reasonOnly(errorCode.getReason()))
+			));
+	}
+
+	@ExceptionHandler(NoResourceFoundException.class)
+	public ResponseEntity<ApiResponse<Void>> handleNoResourceFound(NoResourceFoundException ex) {
+		ErrorCode errorCode = ErrorCode.RESOURCE_NOT_FOUND;
 		return ResponseEntity.status(errorCode.getHttpStatusCode())
 			.body(ApiResponse.fail(
 				errorCode.getCode(),
