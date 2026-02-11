@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.raisedeveloper.server.domain.auth.application.AuthService;
+import com.raisedeveloper.server.domain.exercise.application.AlarmScheduleService;
 import com.raisedeveloper.server.domain.user.domain.User;
 import com.raisedeveloper.server.domain.user.domain.UserAlarmSettings;
 import com.raisedeveloper.server.domain.user.domain.UserCharacter;
@@ -36,6 +37,7 @@ public class UserService {
 	private final AuthService authService;
 	private final UserRepository userRepository;
 	private final UserAlarmSettingsRepository userAlarmSettingsRepository;
+	private final AlarmScheduleService alarmScheduleService;
 	private final UserCharacterRepository userCharacterRepository;
 	private final UserProfileRepository userProfileRepository;
 
@@ -146,6 +148,7 @@ public class UserService {
 					repeatDays
 				))
 			);
+		alarmScheduleService.refreshForUserId(userId, LocalDateTime.now());
 	}
 
 	@Transactional
@@ -160,6 +163,7 @@ public class UserService {
 			);
 
 		alarmSettings.enableDnd(request.dndFinishedAt());
+		alarmScheduleService.refreshForUserId(userId, LocalDateTime.now());
 	}
 
 	@Transactional
