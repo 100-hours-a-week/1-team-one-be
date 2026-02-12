@@ -9,10 +9,12 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
@@ -49,13 +51,13 @@ public class GlobalExceptionHandler {
 				Class<? extends Enum<?>> enumClass = (Class<? extends Enum<?>>)targetClass;
 
 				List<ErrorDetail> errors = List.of(toEnumError(field, enumClass));
-				ErrorCode errorCode = ErrorCode.VALIDATION_FAILED;
+				ErrorCode errorCode = ErrorCode.INVALID_JSON;
 				return ResponseEntity.status(errorCode.getHttpStatusCode())
 					.body(ApiResponse.fail(errorCode.getCode(), errors));
 			}
 		}
 
-		ErrorCode errorCode = ErrorCode.VALIDATION_FAILED;
+		ErrorCode errorCode = ErrorCode.INVALID_JSON;
 		return ResponseEntity.status(errorCode.getHttpStatusCode())
 			.body(ApiResponse.fail(
 				errorCode.getCode(),
@@ -110,6 +112,26 @@ public class GlobalExceptionHandler {
 			));
 	}
 
+	@ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+	public ResponseEntity<ApiResponse<Void>> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex) {
+		ErrorCode errorCode = ErrorCode.UNSUPPORTED_MEDIA_TYPE;
+		return ResponseEntity.status(errorCode.getHttpStatusCode())
+			.body(ApiResponse.fail(
+				errorCode.getCode(),
+				List.of(ErrorDetail.reasonOnly(errorCode.getReason()))
+			));
+	}
+
+	@ExceptionHandler(NoResourceFoundException.class)
+	public ResponseEntity<ApiResponse<Void>> handleNoResourceFound(NoResourceFoundException ex) {
+		ErrorCode errorCode = ErrorCode.RESOURCE_NOT_FOUND;
+		return ResponseEntity.status(errorCode.getHttpStatusCode())
+			.body(ApiResponse.fail(
+				errorCode.getCode(),
+				List.of(ErrorDetail.reasonOnly(errorCode.getReason()))
+			));
+	}
+
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ApiResponse<Void>> handleException(Exception ex) {
 		ErrorCode errorCode = ErrorCode.INTERNAL_SERVER_ERROR;
@@ -117,7 +139,7 @@ public class GlobalExceptionHandler {
 		return ResponseEntity.status(errorCode.getHttpStatusCode())
 			.body(ApiResponse.fail(
 				errorCode.getCode(),
-				List.of(new ErrorDetail(null, errorCode.getCode()))
+				List.of(new ErrorDetail(null, errorCode.getReason()))
 			));
 	}
 
@@ -165,7 +187,8 @@ public class GlobalExceptionHandler {
 		String allowed = Arrays.stream(enumClass.getEnumConstants())
 			.map(Enum::name)
 			.collect(Collectors.joining(", ", "(", ")"));
-		String reason = (field == null ? "value" : field) + " must be " + allowed;
+		String subject = (field == null ? "값" : field + " 값");
+		String reason = subject + "이 올바르지 않습니다. 가능한 값: " + allowed;
 		return ErrorDetail.field(field, reason);
 	}
 
