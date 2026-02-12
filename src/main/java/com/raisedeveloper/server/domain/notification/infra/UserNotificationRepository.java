@@ -30,7 +30,7 @@ public interface UserNotificationRepository extends JpaRepository<UserNotificati
 		select n
 		from UserNotification n
 		where n.user.id = :userId
-		  and (n.createdAt < :createdAt or (n.createdAt = :createdAt and n.id < :id))
+			and (n.createdAt < :createdAt or (n.createdAt = :createdAt and n.id < :id))
 		order by n.createdAt desc, n.id desc
 		""")
 	List<UserNotification> findPageByUserIdAndCursor(
@@ -45,8 +45,12 @@ public interface UserNotificationRepository extends JpaRepository<UserNotificati
 		update UserNotification n
 		set n.isRead = true
 		where n.user.id = :userId
-		  and n.createdAt <= :time
-		  and n.isRead = false
+			and n.id between :minId and :maxId
+			and n.isRead = false
 		""")
-	int markReadUpTo(@Param("userId") Long userId, @Param("time") LocalDateTime time);
+	void markReadBetween(
+		@Param("userId") Long userId,
+		@Param("minId") Long minId,
+		@Param("maxId") Long maxId
+	);
 }
