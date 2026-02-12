@@ -9,12 +9,12 @@ import org.springframework.transaction.annotation.Transactional;
 import com.raisedeveloper.server.domain.notification.domain.UserNotification;
 import com.raisedeveloper.server.domain.notification.dto.NotificationItemResponse;
 import com.raisedeveloper.server.domain.notification.dto.NotificationListResponse;
-import com.raisedeveloper.server.domain.notification.dto.NotificationPagingResponse;
 import com.raisedeveloper.server.domain.notification.dto.NotificationUnreadCountResponse;
 import com.raisedeveloper.server.domain.notification.infra.UserNotificationRepository;
 import com.raisedeveloper.server.domain.user.domain.User;
 import com.raisedeveloper.server.global.pagination.Cursor;
 import com.raisedeveloper.server.global.pagination.CursorService;
+import com.raisedeveloper.server.global.pagination.PagingResponse;
 import com.raisedeveloper.server.global.pagination.PaginationConstants;
 
 import lombok.RequiredArgsConstructor;
@@ -44,7 +44,7 @@ public class NotificationService {
 		List<NotificationItemResponse> items = sliced.stream()
 			.map(this::toItem)
 			.toList();
-		return new NotificationListResponse(items, new NotificationPagingResponse(nextCursor, hasNext));
+		return new NotificationListResponse(items, new PagingResponse(nextCursor, hasNext));
 	}
 
 	@Transactional
