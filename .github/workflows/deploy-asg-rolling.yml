@@ -1,0 +1,105 @@
+name: Deploy ASG (Rolling Update)
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: '배포 환경 (staging, production)'
+        required: true
+        type: string
+      image_uri:
+        description: '배포할 Docker 이미지 URI (ECR)'
+        required: true
+        type: string
+      asg_name:
+        description: 'Auto Scaling Group 이름'
+        required: true
+        type: string
+      lt_id:
+        description: 'Launch Template ID'
+        required: true
+        type: string
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+
+env:
+  AWS_REGION: ap-northeast-2
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update Launch Template & Trigger Refresh
+        env:
+          ENV_NAME: ${{ inputs.environment }}
+          IMAGE_URI: ${{ inputs.image_uri }}
+          LT_ID: ${{ inputs.lt_id }}
+          ASG_NAME: ${{ inputs.asg_name }}
+        run: |
+          echo "=== 1. User Data 스크립트 생성 ==="
+          # EC2가 시작될 때 실행할 스크립트 (Base64 인코딩 전)
+          # 주의: 사용하는 AMI(Amazon Linux 2 vs 2023)에 따라 도커 설치 명령어가 다를 수 있음.
+          # 아래는 Amazon Linux 2 기준 예시임.
+          
+          cat <<EOF > user_data.sh
+          #!/bin/bash
+          # 1. 도커 설치 및 실행 (이미 AMI에 설치되어 있다면 생략 가능)
+          yum update -y
+          amazon-linux-extras install docker
+          service docker start
+          usermod -a -G docker ec2-user
+          
+          # 2. ECR 로그인 (인스턴스에 연결된 IAM Role 사용)
+          # VPC Endpoint 사용
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $(echo $IMAGE_URI | cut -d'/' -f1)
+          
+          # 3. 기존 컨테이너 정리 (혹시 모를 충돌 방지)
+          docker stop backend || true
+          docker rm backend || true
+          
+          # 4. 새 컨테이너 실행
+          docker run -d \\
+            --name backend \\
+            --restart always \\
+            -p 8080:8080 \\
+            -e SPRING_PROFILES_ACTIVE=$ENV_NAME \\
+            -e TZ=Asia/Seoul \\
+            $IMAGE_URI
+          EOF
+          
+          # User Data 내용 확인 (디버깅용, 민감 정보 주의)
+          cat user_data.sh
+
+          echo "=== 2. Base64 인코딩 ==="
+          # Launch Template은 User Data를 Base64 포맷으로 요구함
+          # -w 0: 줄바꿈 없이 한 줄로 출력 (Linux 호환)
+          USER_DATA_BASE64=$(base64 -w 0 user_data.sh)
+
+          echo "=== 3. Launch Template 새 버전 생성 ==="
+          # 기존 템플릿($Latest) 설정을 그대로 가져오되, UserData만 교체
+          aws ec2 create-launch-template-version \
+            --launch-template-id $LT_ID \
+            --source-version "\$Latest" \
+            --launch-template-data "{\"UserData\":\"$USER_DATA_BASE64\"}"
+            
+          echo "=== 4. ASG Instance Refresh 시작 (무중단 배포) ==="
+          # MinHealthyPercentage: 50 (인스턴스 2대 중 1대씩 교체)
+          # InstanceWarmup: 180 (새 인스턴스가 켜지고 앱이 뜰 때까지 대기하는 시간 - 초 단위)
+          # SkipMatching: 이미 설정이 같은 인스턴스는 교체하지 않음 (최적화)
+          
+          aws autoscaling start-instance-refresh \
+            --auto-scaling-group-name $ASG_NAME \
+            --preferences '{"MinHealthyPercentage": 50, "InstanceWarmup": 180, "SkipMatching": true}' \
+            --strategy Rolling
+            
+          echo "Deployment Triggered Successfully!"

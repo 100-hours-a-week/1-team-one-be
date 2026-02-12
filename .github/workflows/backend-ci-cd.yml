@@ -47,8 +47,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       # ECR 로그인
@@ -77,8 +76,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
@@ -138,7 +136,7 @@ jobs:
       environment: dev
       image_uri: ${{ needs.promote-image.outputs.final_image_uri }}
       instance_tag_name: "Environment" # EC2 태그 Key
-      instance_tag_value: "dev-backend" # EC2 태그 Value
+      instance_tag_value: "dev" # EC2 태그 Value
     secrets: inherit
 
   # 3. Staging 배포 (main 브랜치 Merge 시)
