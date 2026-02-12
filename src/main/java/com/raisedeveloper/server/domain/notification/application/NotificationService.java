@@ -1,6 +1,5 @@
 package com.raisedeveloper.server.domain.notification.application;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.data.domain.PageRequest;
@@ -49,8 +48,10 @@ public class NotificationService {
 	}
 
 	@Transactional
-	public void markReadUpTo(Long userId, LocalDateTime lastNotificationTime) {
-		userNotificationRepository.markReadUpTo(userId, lastNotificationTime);
+	public void markReadRange(Long userId, Long oldestNotificationId, Long latestNotificationId) {
+		long minId = Math.min(oldestNotificationId, latestNotificationId);
+		long maxId = Math.max(oldestNotificationId, latestNotificationId);
+		userNotificationRepository.markReadBetween(userId, minId, maxId);
 	}
 
 	private List<UserNotification> fetchNotifications(Long userId, int size, NotificationCursor.Cursor cursor) {
