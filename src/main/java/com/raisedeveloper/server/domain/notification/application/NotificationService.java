@@ -13,6 +13,9 @@ import com.raisedeveloper.server.domain.notification.dto.NotificationPagingRespo
 import com.raisedeveloper.server.domain.notification.dto.NotificationUnreadCountResponse;
 import com.raisedeveloper.server.domain.notification.infra.UserNotificationRepository;
 import com.raisedeveloper.server.domain.user.domain.User;
+import com.raisedeveloper.server.global.pagination.Cursor;
+import com.raisedeveloper.server.global.pagination.CursorService;
+import com.raisedeveloper.server.global.pagination.PaginationConstants;
 
 import lombok.RequiredArgsConstructor;
 
@@ -21,11 +24,8 @@ import lombok.RequiredArgsConstructor;
 @Transactional(readOnly = true)
 public class NotificationService {
 
-	private static final int DEFAULT_LIMIT = 20;
-	private static final int MAX_LIMIT = 50;
-
 	private final UserNotificationRepository userNotificationRepository;
-	private final NotificationCursor notificationCursor;
+	private final CursorService cursorService;
 
 	public NotificationUnreadCountResponse getUnreadCount(Long userId) {
 		long count = userNotificationRepository.countByUserIdAndIsReadFalse(userId);
@@ -34,7 +34,7 @@ public class NotificationService {
 
 	public NotificationListResponse getNotifications(Long userId, Integer limit, String cursor) {
 		int size = normalizeLimit(limit);
-		NotificationCursor.Cursor decoded = notificationCursor.decode(cursor);
+		Cursor decoded = cursorService.decode(cursor);
 		List<UserNotification> notifications = fetchNotifications(userId, size, decoded);
 		boolean hasNext = notifications.size() > size;
 		List<UserNotification> sliced = notifications.stream()
@@ -54,7 +54,7 @@ public class NotificationService {
 		userNotificationRepository.markReadBetween(userId, minId, maxId);
 	}
 
-	private List<UserNotification> fetchNotifications(Long userId, int size, NotificationCursor.Cursor cursor) {
+	private List<UserNotification> fetchNotifications(Long userId, int size, Cursor cursor) {
 		PageRequest pageable = PageRequest.of(0, size + 1);
 		if (cursor == null) {
 			return userNotificationRepository.findPageByUserId(userId, pageable);
@@ -90,10 +90,10 @@ public class NotificationService {
 
 	private int normalizeLimit(Integer limit) {
 		if (limit == null) {
-			return DEFAULT_LIMIT;
+			return PaginationConstants.NOTIFICATION_DEFAULT_LIMIT;
 		}
 		int normalized = Math.max(1, limit);
-		return Math.min(MAX_LIMIT, normalized);
+		return Math.min(PaginationConstants.NOTIFICATION_MAX_LIMIT, normalized);
 	}
 
 	private String buildNextCursor(List<UserNotification> notifications) {
@@ -101,7 +101,7 @@ public class NotificationService {
 			return null;
 		}
 		UserNotification last = notifications.getLast();
-		return notificationCursor.encode(last.getCreatedAt(), last.getId());
+		return cursorService.encode(last.getCreatedAt(), last.getId());
 	}
 
 	private NotificationItemResponse toItem(UserNotification notification) {
