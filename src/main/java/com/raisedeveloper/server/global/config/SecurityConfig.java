@@ -53,6 +53,7 @@ public class SecurityConfig {
 
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers(new RegexRequestMatcher("^/users/\\d+$", "GET")).permitAll()
+				.requestMatchers(new RegexRequestMatcher("^/posts/\\d+$", "GET")).permitAll()
 				.requestMatchers(
 					"/auth/**",
 					"/health",
