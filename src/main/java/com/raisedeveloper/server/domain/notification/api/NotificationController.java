@@ -48,7 +48,11 @@ public class NotificationController {
 	@PostMapping
 	public ApiResponse<Object> markRead(@Valid @RequestBody NotificationReadRequest request) {
 		Long userId = AuthUtils.resolveUserIdFromContext();
-		notificationService.markReadUpTo(userId, request.lastNotificationTime());
+		notificationService.markReadRange(
+			userId,
+			request.oldestNotificationId(),
+			request.latestNotificationId()
+		);
 		return ApiResponse.success("NOTIFICATION_READ_SUCCESS", java.util.Map.of());
 	}
 }
