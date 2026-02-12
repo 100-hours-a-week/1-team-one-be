@@ -18,12 +18,20 @@ import com.raisedeveloper.server.domain.post.domain.PostTag;
 import com.raisedeveloper.server.domain.post.domain.Tag;
 import com.raisedeveloper.server.domain.post.dto.PostCreateRequest;
 import com.raisedeveloper.server.domain.post.dto.PostCreateResponse;
+import com.raisedeveloper.server.domain.post.dto.PostAuthor;
+import com.raisedeveloper.server.domain.post.dto.PostDetail;
+import com.raisedeveloper.server.domain.post.dto.PostDetailResponse;
+import com.raisedeveloper.server.domain.post.dto.PostTagInfo;
 import com.raisedeveloper.server.domain.post.dto.PostUpdateRequest;
 import com.raisedeveloper.server.domain.post.infra.PostImageRepository;
 import com.raisedeveloper.server.domain.post.infra.PostRepository;
 import com.raisedeveloper.server.domain.post.infra.PostTagRepository;
 import com.raisedeveloper.server.domain.post.infra.TagRepository;
 import com.raisedeveloper.server.domain.user.domain.User;
+import com.raisedeveloper.server.domain.user.domain.UserCharacter;
+import com.raisedeveloper.server.domain.user.domain.UserProfile;
+import com.raisedeveloper.server.domain.user.infra.UserCharacterRepository;
+import com.raisedeveloper.server.domain.user.infra.UserProfileRepository;
 import com.raisedeveloper.server.domain.user.infra.UserRepository;
 import com.raisedeveloper.server.global.exception.CustomException;
 import com.raisedeveloper.server.global.exception.ErrorCode;
@@ -36,6 +44,8 @@ import lombok.RequiredArgsConstructor;
 public class PostService {
 
 	private final UserRepository userRepository;
+	private final UserProfileRepository userProfileRepository;
+	private final UserCharacterRepository userCharacterRepository;
 	private final PostRepository postRepository;
 	private final PostImageRepository postImageRepository;
 	private final TagRepository tagRepository;
@@ -117,6 +127,34 @@ public class PostService {
 		post.softDelete(LocalDateTime.now());
 		postImageRepository.deleteAllByPostId(post.getId());
 		postTagRepository.deleteAllByPostId(post.getId());
+	}
+
+	public PostDetailResponse getPostDetail(Long postId, Long viewerUserId) {
+		Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
+			.orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
+
+		User author = post.getUser();
+		UserProfile profile = userProfileRepository.findByUserId(author.getId())
+			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+		UserCharacter character = userCharacterRepository.findByUserId(author.getId())
+			.orElseThrow(() -> new CustomException(ErrorCode.CHARACTER_NOT_SET));
+
+		List<String> images = postImageRepository.findByPostIdOrderBySortOrderAsc(post.getId())
+			.stream()
+			.map(PostImage::getImagePath)
+			.toList();
+
+		List<PostTagInfo> tags = postTagRepository.findTagsByPostId(post.getId())
+			.stream()
+			.map(tag -> new PostTagInfo(tag.getId(), tag.getName()))
+			.toList();
+
+		boolean isAuthor = viewerUserId != null && viewerUserId.equals(author.getId());
+
+		PostAuthor postAuthor = PostAuthor.from(author.getId(), profile, character);
+		PostDetail detail = PostDetail.from(post, isAuthor, postAuthor, images, tags);
+
+		return new PostDetailResponse(detail);
 	}
 
 	private List<String> normalizeList(List<String> values) {
