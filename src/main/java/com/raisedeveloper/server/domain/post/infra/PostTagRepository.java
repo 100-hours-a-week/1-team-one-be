@@ -18,4 +18,12 @@ public interface PostTagRepository extends JpaRepository<PostTag, Long> {
 
 	@Query("SELECT pt.tag FROM PostTag pt WHERE pt.post.id = :postId")
 	List<Tag> findTagsByPostId(@Param("postId") Long postId);
+
+	@Query("""
+		SELECT pt FROM PostTag pt
+		JOIN FETCH pt.tag
+		WHERE pt.post.id IN :postIds
+		ORDER BY pt.post.id DESC, pt.id ASC
+		""")
+	List<PostTag> findByPostIdIn(@Param("postIds") List<Long> postIds);
 }
