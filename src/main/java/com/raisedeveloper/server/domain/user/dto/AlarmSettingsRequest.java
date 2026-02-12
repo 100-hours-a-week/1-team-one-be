@@ -13,22 +13,22 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
 public record AlarmSettingsRequest(
-	@NotNull(message = USER_ALARM_INTERVAL_REQUIRED)
-	@Min(value = 10, message = USER_ALARM_INTERVAL_MIN)
-	@Max(value = 600, message = USER_ALARM_INTERVAL_MAX)
+	@NotNull(message = USER_ALARM_INTERVAL_REQUIRED_MESSAGE)
+	@Min(value = 10, message = USER_ALARM_INTERVAL_MIN_MESSAGE)
+	@Max(value = 600, message = USER_ALARM_INTERVAL_MAX_MESSAGE)
 	short interval,
 
-	@NotNull(message = USER_ALARM_ACTIVE_START_REQUIRED)
+	@NotNull(message = USER_ALARM_ACTIVE_START_REQUIRED_MESSAGE)
 	LocalTime activeStartAt,
 
-	@NotNull(message = USER_ALARM_ACTIVE_END_REQUIRED)
+	@NotNull(message = USER_ALARM_ACTIVE_END_REQUIRED_MESSAGE)
 	LocalTime activeEndAt,
 
 	LocalTime focusStartAt,
 
 	LocalTime focusEndAt,
 
-	@NotEmpty(message = USER_ALARM_REPEAT_DAYS_REQUIRED)
-	List<@Pattern(regexp = REPEAT_DAY_REGEX, message = USER_ALARM_REPEAT_DAY_INVALID) String> repeatDays
+	@NotEmpty(message = USER_ALARM_REPEAT_DAYS_REQUIRED_MESSAGE)
+	List<@Pattern(regexp = REPEAT_DAY_REGEX, message = USER_ALARM_REPEAT_DAY_INVALID_MESSAGE) String> repeatDays
 ) {
 }

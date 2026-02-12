@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 import jakarta.validation.constraints.NotNull;
 
 public record AlarmSettingsDndRequest(
-	@NotNull(message = USER_DND_FINISHED_AT_REQUIRED)
+	@NotNull(message = USER_DND_FINISHED_AT_REQUIRED_MESSAGE)
 	LocalDateTime dndFinishedAt
 ) {
 }

@@ -9,13 +9,13 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 
 public record ExerciseSessionUpdateRequest(
-	@NotNull(message = EXERCISE_SESSION_START_AT_REQUIRED)
+	@NotNull(message = EXERCISE_SESSION_START_AT_REQUIRED_MESSAGE)
 	LocalDateTime startAt,
 
-	@NotNull(message = EXERCISE_SESSION_END_AT_REQUIRED)
+	@NotNull(message = EXERCISE_SESSION_END_AT_REQUIRED_MESSAGE)
 	LocalDateTime endAt,
 
-	@NotNull(message = EXERCISE_SESSION_RESULTS_REQUIRED)
+	@NotNull(message = EXERCISE_SESSION_RESULTS_REQUIRED_MESSAGE)
 	@Valid
 	List<ExerciseResultRequest> exerciseResult
 ) {

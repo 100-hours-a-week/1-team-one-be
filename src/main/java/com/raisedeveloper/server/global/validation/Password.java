@@ -17,7 +17,7 @@ import jakarta.validation.Payload;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Password {
 
-	String message() default AUTH_PASSWORD_FORMAT_INVALID;
+	String message() default AUTH_PASSWORD_FORMAT_INVALID_MESSAGE;
 
 	Class<?>[] groups() default {};
 

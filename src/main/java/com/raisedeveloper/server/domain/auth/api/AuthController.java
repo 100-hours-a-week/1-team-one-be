@@ -75,8 +75,8 @@ public class AuthController {
 
 	@GetMapping("/email-availability")
 	public ApiResponse<AvailabilityResponse> checkEmailAvailability(
-		@Email(message = AUTH_EMAIL_FORMAT_INVALID)
-		@NotBlank(message = AUTH_EMAIL_REQUIRED)
+		@Email(message = AUTH_EMAIL_FORMAT_INVALID_MESSAGE)
+		@NotBlank(message = AUTH_EMAIL_REQUIRED_MESSAGE)
 		@RequestParam("email") String email
 	) {
 		return ApiResponse.success(
@@ -87,9 +87,9 @@ public class AuthController {
 
 	@GetMapping("/nickname-availability")
 	public ApiResponse<AvailabilityResponse> checkNicknameAvailability(
-		@NotBlank(message = USER_NICKNAME_REQUIRED)
-		@Size(max = 10, message = USER_NICKNAME_LENGTH_INVALID)
-		@Pattern(regexp = NICKNAME_REGEX, message = USER_NICKNAME_FORMAT_INVALID)
+		@NotBlank(message = USER_NICKNAME_REQUIRED_MESSAGE)
+		@Size(max = 10, message = USER_NICKNAME_LENGTH_INVALID_MESSAGE)
+		@Pattern(regexp = NICKNAME_REGEX, message = USER_NICKNAME_FORMAT_INVALID_MESSAGE)
 		@RequestParam("nickname") String nickname
 	) {
 		return ApiResponse.success(

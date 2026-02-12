@@ -11,22 +11,22 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record AuthSignUpRequest(
-	@Email(message = AUTH_EMAIL_FORMAT_INVALID)
-	@NotBlank(message = AUTH_EMAIL_REQUIRED)
-	@Size(max = 255, message = AUTH_EMAIL_TOO_LONG)
+	@Email(message = AUTH_EMAIL_FORMAT_INVALID_MESSAGE)
+	@NotBlank(message = AUTH_EMAIL_REQUIRED_MESSAGE)
+	@Size(max = 255, message = AUTH_EMAIL_TOO_LONG_MESSAGE)
 	String email,
 
-	@NotBlank(message = AUTH_PASSWORD_REQUIRED)
+	@NotBlank(message = AUTH_PASSWORD_REQUIRED_MESSAGE)
 	@Password
-	@Size(min = 8, max = 16, message = AUTH_PASSWORD_LENGTH_INVALID)
+	@Size(min = 8, max = 16, message = AUTH_PASSWORD_LENGTH_INVALID_MESSAGE)
 	String password,
 
-	@NotBlank(message = USER_NICKNAME_REQUIRED)
-	@Pattern(regexp = NICKNAME_REGEX, message = USER_NICKNAME_FORMAT_INVALID)
-	@Size(max = 10, message = USER_NICKNAME_LENGTH_INVALID)
+	@NotBlank(message = USER_NICKNAME_REQUIRED_MESSAGE)
+	@Pattern(regexp = NICKNAME_REGEX, message = USER_NICKNAME_FORMAT_INVALID_MESSAGE)
+	@Size(max = 10, message = USER_NICKNAME_LENGTH_INVALID_MESSAGE)
 	String nickname,
 
-	@NotBlank(message = USER_PROFILE_IMAGE_PATH_REQUIRED)
+	@NotBlank(message = USER_PROFILE_IMAGE_PATH_REQUIRED_MESSAGE)
 	String imagePath
 ) {
 }

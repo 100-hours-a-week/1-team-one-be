@@ -6,20 +6,20 @@ public final class ErrorMessageConstants {
 	}
 
 	// Common
-	public static final String INVALID_JSON_MESSAGE = "요청 본문이 올바른 JSON 형식이 아닙니다.";
-	public static final String METHOD_NOT_ALLOWED_MESSAGE = "허용되지 않은 HTTP 메서드입니다.";
-	public static final String ACCESS_DENIED_MESSAGE = "접근 권한이 없습니다.";
-	public static final String VALIDATION_FAILED_MESSAGE = "요청 값 검증에 실패했습니다.";
-	public static final String INTERNAL_SERVER_ERROR_MESSAGE = "서버 내부 오류가 발생했습니다.";
-	public static final String RESOURCE_NOT_FOUND_MESSAGE = "요청한 리소스를 찾을 수 없습니다.";
-	public static final String UNSUPPORTED_MEDIA_TYPE_MESSAGE = "지원하지 않는 Content-Type 입니다.";
+	public static final String COMMON_INVALID_JSON_MESSAGE = "요청 본문이 올바른 JSON 형식이 아닙니다.";
+	public static final String COMMON_METHOD_NOT_ALLOWED_MESSAGE = "허용되지 않은 HTTP 메서드입니다.";
+	public static final String COMMON_ACCESS_DENIED_MESSAGE = "접근 권한이 없습니다.";
+	public static final String COMMON_VALIDATION_FAILED_MESSAGE = "요청 값 검증에 실패했습니다.";
+	public static final String COMMON_INTERNAL_SERVER_ERROR_MESSAGE = "서버 내부 오류가 발생했습니다.";
+	public static final String COMMON_RESOURCE_NOT_FOUND_MESSAGE = "요청한 리소스를 찾을 수 없습니다.";
+	public static final String COMMON_UNSUPPORTED_MEDIA_TYPE_MESSAGE = "지원하지 않는 Content-Type 입니다.";
 
 	// JWT / Auth (error reasons)
-	public static final String ACCESS_TOKEN_MISSING_MESSAGE = "인증 토큰이 없습니다.";
-	public static final String ACCESS_TOKEN_EXPIRED_MESSAGE = "액세스 토큰이 만료되었습니다.";
-	public static final String ACCESS_TOKEN_INVALID_MESSAGE = "액세스 토큰이 유효하지 않습니다.";
-	public static final String REFRESH_TOKEN_EXPIRED_MESSAGE = "리프레시 토큰이 만료되었습니다.";
-	public static final String REFRESH_TOKEN_INVALID_MESSAGE = "리프레시 토큰이 유효하지 않습니다.";
+	public static final String AUTH_ACCESS_TOKEN_MISSING_MESSAGE = "인증 토큰이 없습니다.";
+	public static final String AUTH_ACCESS_TOKEN_EXPIRED_MESSAGE = "액세스 토큰이 만료되었습니다.";
+	public static final String AUTH_ACCESS_TOKEN_INVALID_MESSAGE = "액세스 토큰이 유효하지 않습니다.";
+	public static final String AUTH_REFRESH_TOKEN_EXPIRED_MESSAGE = "리프레시 토큰이 만료되었습니다.";
+	public static final String AUTH_REFRESH_TOKEN_INVALID_MESSAGE = "리프레시 토큰이 유효하지 않습니다.";
 	public static final String AUTH_INVALID_CREDENTIALS_MESSAGE = "이메일 또는 비밀번호가 올바르지 않습니다.";
 
 	// User domain (error reasons)
@@ -66,55 +66,56 @@ public final class ErrorMessageConstants {
 	public static final String POST_NOT_FOUND_MESSAGE = "해당 게시글을 찾을 수 없습니다.";
 
 	// Validation: Auth
-	public static final String AUTH_EMAIL_FORMAT_INVALID = "올바른 이메일 형식을 입력해주세요.";
-	public static final String AUTH_EMAIL_REQUIRED = "이메일은 필수입니다.";
-	public static final String AUTH_EMAIL_TOO_LONG = "이메일은 최대 255자까지 가능합니다.";
-	public static final String AUTH_PASSWORD_LENGTH_INVALID = "비밀번호는 8자 이상 16자 이하여야 합니다.";
-	public static final String AUTH_PASSWORD_REQUIRED = "비밀번호는 필수 값입니다.";
-	public static final String AUTH_PASSWORD_FORMAT_INVALID = "비밀번호는 대문자, 소문자, 숫자, 특수문자를 각각 1개 이상 포함해야 합니다.";
-	public static final String AUTH_REFRESH_TOKEN_REQUIRED = "리프레시 토큰은 필수입니다.";
-	public static final String AUTH_FCM_TOKEN_INVALID = "FCM 토큰이 유효하지 않습니다.";
+	public static final String AUTH_EMAIL_FORMAT_INVALID_MESSAGE = "올바른 이메일 형식을 입력해주세요.";
+	public static final String AUTH_EMAIL_REQUIRED_MESSAGE = "이메일은 필수입니다.";
+	public static final String AUTH_EMAIL_TOO_LONG_MESSAGE = "이메일은 최대 255자까지 가능합니다.";
+	public static final String AUTH_PASSWORD_LENGTH_INVALID_MESSAGE = "비밀번호는 8자 이상 16자 이하여야 합니다.";
+	public static final String AUTH_PASSWORD_REQUIRED_MESSAGE = "비밀번호는 필수 값입니다.";
+	public static final String AUTH_PASSWORD_FORMAT_INVALID_MESSAGE = "비밀번호는 대문자, 소문자, 숫자, 특수문자를 각각 1개 이상 포함해야 합니다.";
+	public static final String AUTH_REFRESH_TOKEN_REQUIRED_MESSAGE = "리프레시 토큰은 필수입니다.";
+	public static final String AUTH_FCM_TOKEN_INVALID_MESSAGE = "FCM 토큰이 유효하지 않습니다.";
 
 	// Validation: User
-	public static final String USER_NICKNAME_REQUIRED = "닉네임은 필수 값입니다.";
-	public static final String USER_NICKNAME_LENGTH_INVALID = "닉네임은 10자 이내로 입력해주세요.";
-	public static final String USER_NICKNAME_FORMAT_INVALID = "닉네임은 한글/영문만 입력 가능하며 공백 및 특수문자를 사용할 수 없습니다.";
-	public static final String USER_PROFILE_IMAGE_PATH_REQUIRED = "이미지 경로는 필수 값입니다.";
-	public static final String USER_CHARACTER_TYPE_REQUIRED = "캐릭터 타입은 필수입니다.";
-	public static final String USER_ALARM_INTERVAL_REQUIRED = "알람 간격은 필수입니다.";
-	public static final String USER_ALARM_INTERVAL_MIN = "알람 간격은 최소 10분이어야 합니다.";
-	public static final String USER_ALARM_INTERVAL_MAX = "알람 간격은 최대 600분까지 가능합니다.";
-	public static final String USER_ALARM_ACTIVE_START_REQUIRED = "알람 활성 시작 시간은 필수입니다.";
-	public static final String USER_ALARM_ACTIVE_END_REQUIRED = "알람 활성 종료 시간은 필수입니다.";
-	public static final String USER_ALARM_REPEAT_DAYS_REQUIRED = "반복 요일은 최소 1개 이상이어야 합니다.";
-	public static final String USER_ALARM_REPEAT_DAY_INVALID = "반복 요일 값이 올바르지 않습니다.";
-	public static final String USER_DND_FINISHED_AT_REQUIRED = "방해금지 종료 시간은 필수입니다.";
+	public static final String USER_NICKNAME_REQUIRED_MESSAGE = "닉네임은 필수 값입니다.";
+	public static final String USER_NICKNAME_LENGTH_INVALID_MESSAGE = "닉네임은 10자 이내로 입력해주세요.";
+	public static final String USER_NICKNAME_FORMAT_INVALID_MESSAGE = "닉네임은 한글/영문만 입력 가능하며 공백 및 특수문자를 사용할 수 없습니다.";
+	public static final String USER_PROFILE_IMAGE_PATH_REQUIRED_MESSAGE = "이미지 경로는 필수 값입니다.";
+	public static final String USER_CHARACTER_TYPE_REQUIRED_MESSAGE = "캐릭터 타입은 필수입니다.";
+	public static final String USER_ALARM_INTERVAL_REQUIRED_MESSAGE = "알람 간격은 필수입니다.";
+	public static final String USER_ALARM_INTERVAL_MIN_MESSAGE = "알람 간격은 최소 10분이어야 합니다.";
+	public static final String USER_ALARM_INTERVAL_MAX_MESSAGE = "알람 간격은 최대 600분까지 가능합니다.";
+	public static final String USER_ALARM_ACTIVE_START_REQUIRED_MESSAGE = "알람 활성 시작 시간은 필수입니다.";
+	public static final String USER_ALARM_ACTIVE_END_REQUIRED_MESSAGE = "알람 활성 종료 시간은 필수입니다.";
+	public static final String USER_ALARM_REPEAT_DAYS_REQUIRED_MESSAGE = "반복 요일은 최소 1개 이상이어야 합니다.";
+	public static final String USER_ALARM_REPEAT_DAY_INVALID_MESSAGE = "반복 요일 값이 올바르지 않습니다.";
+	public static final String USER_DND_FINISHED_AT_REQUIRED_MESSAGE = "방해금지 종료 시간은 필수입니다.";
 
 	// Validation: Image
-	public static final String IMAGE_FILE_NAME_REQUIRED = "파일명은 필수입니다.";
-	public static final String IMAGE_CONTENT_TYPE_REQUIRED = "컨텐츠 타입은 필수입니다.";
+	public static final String IMAGE_FILE_NAME_REQUIRED_MESSAGE = "파일명은 필수입니다.";
+	public static final String IMAGE_CONTENT_TYPE_REQUIRED_MESSAGE = "컨텐츠 타입은 필수입니다.";
 
 	// Validation: Notification
-	public static final String NOTIFICATION_LAST_TIME_REQUIRED = "마지막 알림 시간은 필수입니다.";
+	public static final String NOTIFICATION_OLDEST_ID_REQUIRED_MESSAGE = "가장 오래된 알림 ID는 필수입니다.";
+	public static final String NOTIFICATION_LATEST_ID_REQUIRED_MESSAGE = "가장 최신 알림 ID는 필수입니다.";
 
 	// Validation: Survey
-	public static final String SURVEY_ID_REQUIRED = "설문 ID는 필수입니다.";
-	public static final String SURVEY_RESPONSES_REQUIRED = "설문 응답은 비어 있을 수 없습니다.";
-	public static final String SURVEY_QUESTION_ID_REQUIRED = "질문 ID는 필수입니다.";
-	public static final String SURVEY_OPTION_ID_REQUIRED = "선택지 ID는 필수입니다.";
+	public static final String SURVEY_ID_REQUIRED_MESSAGE = "설문 ID는 필수입니다.";
+	public static final String SURVEY_RESPONSES_REQUIRED_MESSAGE = "설문 응답은 비어 있을 수 없습니다.";
+	public static final String SURVEY_QUESTION_ID_REQUIRED_MESSAGE = "질문 ID는 필수입니다.";
+	public static final String SURVEY_OPTION_ID_REQUIRED_MESSAGE = "선택지 ID는 필수입니다.";
 
 	// Validation: Exercise
-	public static final String EXERCISE_ROUTINE_STEP_ID_REQUIRED = "루틴 단계 ID는 필수입니다.";
-	public static final String EXERCISE_RESULT_STATUS_REQUIRED = "운동 결과 상태는 필수입니다.";
-	public static final String EXERCISE_POSE_RECORD_REQUIRED = "포즈 기록은 필수입니다.";
-	public static final String EXERCISE_ACCURACY_REQUIRED = "정확도는 필수입니다.";
-	public static final String EXERCISE_ACCURACY_MIN = "정확도는 최소 0 이상이어야 합니다.";
-	public static final String EXERCISE_ACCURACY_MAX = "정확도는 최대 100 이하여야 합니다.";
-	public static final String EXERCISE_START_AT_REQUIRED = "운동 시작 시간은 필수입니다.";
-	public static final String EXERCISE_END_AT_REQUIRED = "운동 종료 시간은 필수입니다.";
-	public static final String EXERCISE_SESSION_START_AT_REQUIRED = "세션 시작 시간은 필수입니다.";
-	public static final String EXERCISE_SESSION_END_AT_REQUIRED = "세션 종료 시간은 필수입니다.";
-	public static final String EXERCISE_SESSION_RESULTS_REQUIRED = "운동 결과는 필수입니다.";
+	public static final String EXERCISE_ROUTINE_STEP_ID_REQUIRED_MESSAGE = "루틴 단계 ID는 필수입니다.";
+	public static final String EXERCISE_RESULT_STATUS_REQUIRED_MESSAGE = "운동 결과 상태는 필수입니다.";
+	public static final String EXERCISE_POSE_RECORD_REQUIRED_MESSAGE = "포즈 기록은 필수입니다.";
+	public static final String EXERCISE_ACCURACY_REQUIRED_MESSAGE = "정확도는 필수입니다.";
+	public static final String EXERCISE_ACCURACY_MIN_MESSAGE = "정확도는 최소 0 이상이어야 합니다.";
+	public static final String EXERCISE_ACCURACY_MAX_MESSAGE = "정확도는 최대 100 이하여야 합니다.";
+	public static final String EXERCISE_START_AT_REQUIRED_MESSAGE = "운동 시작 시간은 필수입니다.";
+	public static final String EXERCISE_END_AT_REQUIRED_MESSAGE = "운동 종료 시간은 필수입니다.";
+	public static final String EXERCISE_SESSION_START_AT_REQUIRED_MESSAGE = "세션 시작 시간은 필수입니다.";
+	public static final String EXERCISE_SESSION_END_AT_REQUIRED_MESSAGE = "세션 종료 시간은 필수입니다.";
+	public static final String EXERCISE_SESSION_RESULTS_REQUIRED_MESSAGE = "운동 결과는 필수입니다.";
 
 	// Validation: Post Domain
 	public static final String POST_IMAGES_TOO_MANY_MESSAGE =
