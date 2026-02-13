@@ -35,4 +35,26 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 		@Param("id") Long id,
 		Pageable pageable
 	);
+
+	@Query("""
+		SELECT p FROM Post p
+		WHERE p.deletedAt IS NULL
+		  AND p.user.id = :authorId
+		ORDER BY p.createdAt DESC, p.id DESC
+		""")
+	List<Post> findPageByAuthorId(@Param("authorId") Long authorId, Pageable pageable);
+
+	@Query("""
+		SELECT p FROM Post p
+		WHERE p.deletedAt IS NULL
+		  AND p.user.id = :authorId
+		  AND (p.createdAt < :createdAt OR (p.createdAt = :createdAt AND p.id < :id))
+		ORDER BY p.createdAt DESC, p.id DESC
+		""")
+	List<Post> findPageByAuthorIdAndCursor(
+		@Param("authorId") Long authorId,
+		@Param("createdAt") LocalDateTime createdAt,
+		@Param("id") Long id,
+		Pageable pageable
+	);
 }

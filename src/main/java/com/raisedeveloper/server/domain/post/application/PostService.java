@@ -167,10 +167,15 @@ public class PostService {
 		return new PostDetailResponse(detail);
 	}
 
-	public PostListResponse getPosts(Integer limit, String cursor) {
+	public PostListResponse getPosts(Long authorId, Integer limit, String cursor) {
+		if (authorId != null) {
+			userRepository.findByIdAndDeletedAtIsNull(authorId)
+				.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+		}
+
 		int size = normalizeLimit(limit);
 		Cursor decoded = cursorService.decode(cursor);
-		List<Post> posts = fetchPosts(size, decoded);
+		List<Post> posts = fetchPosts(authorId, size, decoded);
 		boolean hasNext = posts.size() > size;
 		List<Post> sliced = posts.stream()
 			.limit(size)
@@ -274,12 +279,23 @@ public class PostService {
 		return Math.min(PaginationConstants.POST_MAX_LIMIT, normalized);
 	}
 
-	private List<Post> fetchPosts(int size, Cursor cursor) {
+	private List<Post> fetchPosts(Long authorId, int size, Cursor cursor) {
 		PageRequest pageable = PageRequest.of(0, size + 1);
-		if (cursor == null) {
-			return postRepository.findPage(pageable);
+		if (authorId == null) {
+			if (cursor == null) {
+				return postRepository.findPage(pageable);
+			}
+			return postRepository.findPageByCursor(cursor.createdAt(), cursor.id(), pageable);
 		}
-		return postRepository.findPageByCursor(cursor.createdAt(), cursor.id(), pageable);
+		if (cursor == null) {
+			return postRepository.findPageByAuthorId(authorId, pageable);
+		}
+		return postRepository.findPageByAuthorIdAndCursor(
+			authorId,
+			cursor.createdAt(),
+			cursor.id(),
+			pageable
+		);
 	}
 
 	private String buildNextCursor(List<Post> posts) {

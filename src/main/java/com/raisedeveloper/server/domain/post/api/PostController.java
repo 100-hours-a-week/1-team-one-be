@@ -44,9 +44,10 @@ public class PostController {
 	@GetMapping
 	public ApiResponse<PostListResponse> getPosts(
 		@RequestParam(value = "limit", required = false) Integer limit,
-		@RequestParam(value = "cursor", required = false) String cursor
+		@RequestParam(value = "cursor", required = false) String cursor,
+		@RequestParam(value = "author-id", required = false) Long authorId
 	) {
-		PostListResponse res = postService.getPosts(limit, cursor);
+		PostListResponse res = postService.getPosts(authorId, limit, cursor);
 		return ApiResponse.success("GET_POSTS_SUCCESS", res);
 	}
 
