@@ -12,6 +12,7 @@ import com.raisedeveloper.server.domain.user.domain.UserAlarmSettings;
 import com.raisedeveloper.server.domain.user.domain.UserCharacter;
 import com.raisedeveloper.server.domain.user.domain.UserProfile;
 import com.raisedeveloper.server.domain.user.dto.AlarmSettingsDndRequest;
+import com.raisedeveloper.server.domain.user.dto.AlarmSettingsDndResponse;
 import com.raisedeveloper.server.domain.user.dto.AlarmSettingsRequest;
 import com.raisedeveloper.server.domain.user.dto.CharacterCreateRequest;
 import com.raisedeveloper.server.domain.user.dto.CharacterCreateResponse;
@@ -110,7 +111,7 @@ public class UserService {
 
 	@Transactional
 	public UserMeAlarmSettingsResponse getAlarmSettings(Long userId) {
-		User user = userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
+		userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
 			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
 		);
 
@@ -119,6 +120,19 @@ public class UserService {
 				() -> new CustomException(ErrorCode.ALARM_SETTING_NOT_FOUND));
 
 		return UserMeAlarmSettingsResponse.from(settings);
+	}
+
+	@Transactional
+	public AlarmSettingsDndResponse getAlarmDnd(Long userId) {
+		userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
+			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
+		);
+
+		UserAlarmSettings settings = userAlarmSettingsRepository.findByUserId(userId)
+			.orElseThrow(
+				() -> new CustomException(ErrorCode.ALARM_SETTING_NOT_FOUND));
+
+		return AlarmSettingsDndResponse.from(settings);
 	}
 
 	@Transactional
