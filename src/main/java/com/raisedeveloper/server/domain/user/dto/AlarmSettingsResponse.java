@@ -1,6 +1,5 @@
 package com.raisedeveloper.server.domain.user.dto;
 
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
@@ -10,8 +9,6 @@ public record AlarmSettingsResponse(
 	LocalTime activeEndAt,
 	LocalTime focusStartAt,
 	LocalTime focusEndAt,
-	List<String> repeatDays,
-	boolean dnd,
-	LocalDateTime dndFinishedAt
+	List<String> repeatDays
 ) {
 }

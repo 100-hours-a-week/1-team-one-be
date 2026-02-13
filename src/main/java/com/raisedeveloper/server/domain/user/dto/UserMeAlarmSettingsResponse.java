@@ -20,9 +20,7 @@ public record UserMeAlarmSettingsResponse(
 				settings.getActiveEndAt(),
 				settings.getFocusStartAt(),
 				settings.getFocusEndAt(),
-				repeatDays,
-				settings.isDnd(),
-				settings.getDndFinishedAt()
+				repeatDays
 			));
 	}
 }

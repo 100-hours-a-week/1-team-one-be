@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.raisedeveloper.server.domain.user.application.UserService;
 import com.raisedeveloper.server.domain.user.dto.AlarmSettingsDndRequest;
+import com.raisedeveloper.server.domain.user.dto.AlarmSettingsDndResponse;
 import com.raisedeveloper.server.domain.user.dto.AlarmSettingsRequest;
 import com.raisedeveloper.server.domain.user.dto.CharacterCreateRequest;
 import com.raisedeveloper.server.domain.user.dto.CharacterCreateResponse;
@@ -85,6 +86,12 @@ public class UserController {
 	public ApiResponse<UserMeAlarmSettingsResponse> getAlarmSettings() {
 		Long userId = AuthUtils.resolveUserIdFromContext();
 		return ApiResponse.success("GET_ME_ALARM_SETTING_SUCCESS", userService.getAlarmSettings(userId));
+	}
+
+	@GetMapping("/me/alarm-settings/dnd")
+	public ApiResponse<AlarmSettingsDndResponse> getAlarmDnd() {
+		Long userId = AuthUtils.resolveUserIdFromContext();
+		return ApiResponse.success("GET_ME_ALARM_SETTING_DND_SUCCESS", userService.getAlarmDnd(userId));
 	}
 
 	@PutMapping("/me/alarm-settings")
