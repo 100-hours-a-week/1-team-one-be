@@ -30,4 +30,24 @@ public class AuthUtils {
 		}
 		throw new CustomException(ErrorCode.ACCESS_TOKEN_INVALID);
 	}
+
+	public static Long resolveUserIdFromContextOrNull() {
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		if (authentication == null) {
+			return null;
+		}
+		Object details = authentication.getDetails();
+		if (!(details instanceof Map<?, ?> detailsMap)) {
+			return null;
+		}
+		Object tokenType = detailsMap.get("tokenType");
+		if (tokenType != TokenType.ACCESS) {
+			return null;
+		}
+		Object userId = detailsMap.get("userId");
+		if (userId instanceof Long id) {
+			return id;
+		}
+		return null;
+	}
 }

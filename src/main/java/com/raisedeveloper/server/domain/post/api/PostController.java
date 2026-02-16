@@ -4,17 +4,21 @@ import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.raisedeveloper.server.domain.post.application.PostService;
 import com.raisedeveloper.server.domain.post.dto.PostCreateRequest;
 import com.raisedeveloper.server.domain.post.dto.PostCreateResponse;
+import com.raisedeveloper.server.domain.post.dto.PostDetailResponse;
+import com.raisedeveloper.server.domain.post.dto.PostListResponse;
 import com.raisedeveloper.server.domain.post.dto.PostUpdateRequest;
 import com.raisedeveloper.server.global.response.ApiResponse;
 import com.raisedeveloper.server.global.security.utils.AuthUtils;
@@ -37,6 +41,16 @@ public class PostController {
 		return ApiResponse.success("CREATE_POST_SUCCESS", res);
 	}
 
+	@GetMapping
+	public ApiResponse<PostListResponse> getPosts(
+		@RequestParam(value = "limit", required = false) Integer limit,
+		@RequestParam(value = "cursor", required = false) String cursor,
+		@RequestParam(value = "author-id", required = false) Long authorId
+	) {
+		PostListResponse res = postService.getPosts(authorId, limit, cursor);
+		return ApiResponse.success("GET_POSTS_SUCCESS", res);
+	}
+
 	@PutMapping("/{postId}")
 	public ApiResponse<Object> updatePost(
 		@PathVariable Long postId,
@@ -52,5 +66,12 @@ public class PostController {
 		Long userId = AuthUtils.resolveUserIdFromContext();
 		postService.deletePost(userId, postId);
 		return ApiResponse.success("DELETE_POST_SUCCESS", Map.of());
+	}
+
+	@GetMapping("/{postId}")
+	public ApiResponse<PostDetailResponse> getPostDetail(@PathVariable Long postId) {
+		Long userId = AuthUtils.resolveUserIdFromContextOrNull();
+		PostDetailResponse response = postService.getPostDetail(postId, userId);
+		return ApiResponse.success("GET_POST_DETAIL_SUCCESS", response);
 	}
 }
