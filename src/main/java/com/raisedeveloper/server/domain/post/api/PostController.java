@@ -48,7 +48,7 @@ public class PostController {
 		@RequestParam(value = "author-id", required = false) Long authorId
 	) {
 		PostListResponse res = postService.getPosts(authorId, limit, cursor);
-		return ApiResponse.success("GET_POSTS_SUCCESS", res);
+		return ApiResponse.of("GET_POSTS_SUCCESS", res);
 	}
 
 	@PutMapping("/{postId}")
@@ -72,6 +72,6 @@ public class PostController {
 	public ApiResponse<PostDetailResponse> getPostDetail(@PathVariable Long postId) {
 		Long userId = AuthUtils.resolveUserIdFromContextOrNull();
 		PostDetailResponse response = postService.getPostDetail(postId, userId);
-		return ApiResponse.success("GET_POST_DETAIL_SUCCESS", response);
+		return ApiResponse.of("GET_POST_DETAIL_SUCCESS", response);
 	}
 }
