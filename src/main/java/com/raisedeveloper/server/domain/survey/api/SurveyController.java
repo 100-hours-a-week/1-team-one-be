@@ -26,7 +26,7 @@ public class SurveyController {
 	@GetMapping("/survey")
 	public ApiResponse<SurveyDetailResponse> getSurvey() {
 		AuthUtils.resolveUserIdFromContext();
-		return ApiResponse.success("GET_SURVEY_SUCCESS", surveyService.getSurvey());
+		return ApiResponse.of("GET_SURVEY_SUCCESS", surveyService.getSurvey());
 	}
 
 	@PostMapping("/survey-submission")
@@ -35,7 +35,7 @@ public class SurveyController {
 		@Valid @RequestBody SurveySubmissionRequest request
 	) {
 		Long userId = AuthUtils.resolveUserIdFromContext();
-		return ApiResponse.success(
+		return ApiResponse.of(
 			"CREATE_SURVEY_SUBMISSION_SUCCESS",
 			surveyService.submitSurvey(userId, request)
 		);

@@ -10,7 +10,7 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.raisedeveloper.server.global.exception.ErrorCode;
 import com.raisedeveloper.server.global.exception.ErrorDetail;
-import com.raisedeveloper.server.global.response.ApiResponse;
+import com.raisedeveloper.server.global.response.ErrorResponse;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -40,7 +40,7 @@ public class JwtAccessDeniedHandler implements AccessDeniedHandler {
 		response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 		response.setCharacterEncoding("UTF-8");
 
-		var body = ApiResponse.fail(
+		var body = ErrorResponse.of(
 			errorCode.getCode(),
 			List.of(ErrorDetail.reasonOnly(errorCode.getReason()))
 		);

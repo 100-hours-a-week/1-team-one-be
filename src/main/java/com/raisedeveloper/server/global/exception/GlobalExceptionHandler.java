@@ -18,7 +18,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
-import com.raisedeveloper.server.global.response.ApiResponse;
+import com.raisedeveloper.server.global.response.ErrorResponse;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -29,16 +29,16 @@ import lombok.extern.slf4j.Slf4j;
 public class GlobalExceptionHandler {
 
 	@ExceptionHandler(CustomException.class)
-	public ResponseEntity<ApiResponse<Void>> handleCustomException(CustomException ex) {
+	public ResponseEntity<ErrorResponse> handleCustomException(CustomException ex) {
 		ErrorCode errorCode = ex.getErrorCode();
 		List<ErrorDetail> errors = ex.getErrors();
 
 		return ResponseEntity.status(errorCode.getHttpStatusCode())
-			.body(ApiResponse.fail(errorCode.getCode(), errors));
+			.body(ErrorResponse.of(errorCode.getCode(), errors));
 	}
 
 	@ExceptionHandler(HttpMessageNotReadableException.class)
-	public ResponseEntity<ApiResponse<Void>> handleNotReadable(HttpMessageNotReadableException ex) {
+	public ResponseEntity<ErrorResponse> handleNotReadable(HttpMessageNotReadableException ex) {
 		Throwable cause = getDeepestCause(ex);
 
 		if (cause instanceof InvalidFormatException ife) {
@@ -53,20 +53,20 @@ public class GlobalExceptionHandler {
 				List<ErrorDetail> errors = List.of(toEnumError(field, enumClass));
 				ErrorCode errorCode = ErrorCode.INVALID_JSON;
 				return ResponseEntity.status(errorCode.getHttpStatusCode())
-					.body(ApiResponse.fail(errorCode.getCode(), errors));
+					.body(ErrorResponse.of(errorCode.getCode(), errors));
 			}
 		}
 
 		ErrorCode errorCode = ErrorCode.INVALID_JSON;
 		return ResponseEntity.status(errorCode.getHttpStatusCode())
-			.body(ApiResponse.fail(
+			.body(ErrorResponse.of(
 				errorCode.getCode(),
 				List.of(ErrorDetail.reasonOnly(errorCode.getReason()))
 			));
 	}
 
 	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
-	public ResponseEntity<ApiResponse<Void>> handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException ex) {
+	public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException ex) {
 		Class<?> targetType = ex.getRequiredType();
 		if (targetType != null && targetType.isEnum()) {
 			@SuppressWarnings("unchecked")
@@ -74,70 +74,70 @@ public class GlobalExceptionHandler {
 			String field = ex.getName();
 			ErrorCode errorCode = ErrorCode.VALIDATION_FAILED;
 			return ResponseEntity.status(errorCode.getHttpStatusCode())
-				.body(ApiResponse.fail(errorCode.getCode(), List.of(toEnumError(field, enumClass))));
+				.body(ErrorResponse.of(errorCode.getCode(), List.of(toEnumError(field, enumClass))));
 		}
 		ErrorCode errorCode = ErrorCode.VALIDATION_FAILED;
 		return ResponseEntity.status(errorCode.getHttpStatusCode())
-			.body(ApiResponse.fail(
+			.body(ErrorResponse.of(
 				errorCode.getCode(),
 				List.of(ErrorDetail.reasonOnly(errorCode.getReason()))
 			));
 	}
 
 	@ExceptionHandler(BindException.class)
-	public ResponseEntity<ApiResponse<Void>> handleBindException(BindException ex) {
+	public ResponseEntity<ErrorResponse> handleBindException(BindException ex) {
 		ErrorCode errorCode = ErrorCode.VALIDATION_FAILED;
 		List<ErrorDetail> errors = mapFieldErrors(ex.getBindingResult());
 		return ResponseEntity.status(errorCode.getHttpStatusCode())
-			.body(ApiResponse.fail(errorCode.getCode(), errors));
+			.body(ErrorResponse.of(errorCode.getCode(), errors));
 	}
 
 	@ExceptionHandler(ConstraintViolationException.class)
-	public ResponseEntity<ApiResponse<Void>> handleConstraintViolationException(ConstraintViolationException ex) {
+	public ResponseEntity<ErrorResponse> handleConstraintViolationException(ConstraintViolationException ex) {
 		ErrorCode errorCode = ErrorCode.VALIDATION_FAILED;
 		List<ErrorDetail> errors = ex.getConstraintViolations().stream()
 			.map(this::mapConstraintViolation)
 			.toList();
 		return ResponseEntity.status(errorCode.getHttpStatusCode())
-			.body(ApiResponse.fail(errorCode.getCode(), errors));
+			.body(ErrorResponse.of(errorCode.getCode(), errors));
 	}
 
 	@ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-	public ResponseEntity<ApiResponse<Void>> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+	public ResponseEntity<ErrorResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
 		ErrorCode errorCode = ErrorCode.METHOD_NOT_ALLOWED;
 		return ResponseEntity.status(errorCode.getHttpStatusCode())
-			.body(ApiResponse.fail(
+			.body(ErrorResponse.of(
 				errorCode.getCode(),
 				List.of(ErrorDetail.reasonOnly(errorCode.getReason()))
 			));
 	}
 
 	@ExceptionHandler(HttpMediaTypeNotSupportedException.class)
-	public ResponseEntity<ApiResponse<Void>> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex) {
+	public ResponseEntity<ErrorResponse> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex) {
 		ErrorCode errorCode = ErrorCode.UNSUPPORTED_MEDIA_TYPE;
 		return ResponseEntity.status(errorCode.getHttpStatusCode())
-			.body(ApiResponse.fail(
+			.body(ErrorResponse.of(
 				errorCode.getCode(),
 				List.of(ErrorDetail.reasonOnly(errorCode.getReason()))
 			));
 	}
 
 	@ExceptionHandler(NoResourceFoundException.class)
-	public ResponseEntity<ApiResponse<Void>> handleNoResourceFound(NoResourceFoundException ex) {
+	public ResponseEntity<ErrorResponse> handleNoResourceFound(NoResourceFoundException ex) {
 		ErrorCode errorCode = ErrorCode.RESOURCE_NOT_FOUND;
 		return ResponseEntity.status(errorCode.getHttpStatusCode())
-			.body(ApiResponse.fail(
+			.body(ErrorResponse.of(
 				errorCode.getCode(),
 				List.of(ErrorDetail.reasonOnly(errorCode.getReason()))
 			));
 	}
 
 	@ExceptionHandler(Exception.class)
-	public ResponseEntity<ApiResponse<Void>> handleException(Exception ex) {
+	public ResponseEntity<ErrorResponse> handleException(Exception ex) {
 		ErrorCode errorCode = ErrorCode.INTERNAL_SERVER_ERROR;
 		log.error(ex.getMessage(), ex);
 		return ResponseEntity.status(errorCode.getHttpStatusCode())
-			.body(ApiResponse.fail(
+			.body(ErrorResponse.of(
 				errorCode.getCode(),
 				List.of(new ErrorDetail(null, errorCode.getReason()))
 			));

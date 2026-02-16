@@ -28,7 +28,7 @@ public class ExerciseController {
 
 	@GetMapping("/exercises")
 	public ApiResponse<ExerciseListResponse> getAllExercises() {
-		return ApiResponse.success("GET_EXERCISES_SUCCESS", exerciseService.getAllExercises());
+		return ApiResponse.of("GET_EXERCISES_SUCCESS", exerciseService.getAllExercises());
 	}
 
 	@GetMapping("/me/exercise-sessions/valid")
@@ -36,14 +36,14 @@ public class ExerciseController {
 		Long userId = AuthUtils.resolveUserIdFromContext();
 		ExerciseSessionValidListResponse response = exerciseSessionService
 			.getValidExerciseSessions(userId);
-		return ApiResponse.success("GET_VALID_EXERCISE_SESSION_SUCCESS", response);
+		return ApiResponse.of("GET_VALID_EXERCISE_SESSION_SUCCESS", response);
 	}
 
 	@GetMapping("/me/exercise-sessions/{sessionId}")
 	public ApiResponse<ExerciseSessionResponse> getExerciseSession(@PathVariable Long sessionId) {
 		Long userId = AuthUtils.resolveUserIdFromContext();
 		ExerciseSessionResponse response = exerciseSessionService.getExerciseSession(userId, sessionId);
-		return ApiResponse.success("_GET_SESSION_SUCCESS", response);
+		return ApiResponse.of("_GET_SESSION_SUCCESS", response);
 	}
 
 	@PatchMapping("/me/exercise-sessions/{sessionId}")
@@ -54,6 +54,6 @@ public class ExerciseController {
 		Long userId = AuthUtils.resolveUserIdFromContext();
 		ExerciseSessionCompleteResponse response = exerciseSessionService.completeExerciseSession(userId, sessionId,
 			request);
-		return ApiResponse.success("COMPLETE_EXERCISE_SESSION_SUCCESS", response);
+		return ApiResponse.of("COMPLETE_EXERCISE_SESSION_SUCCESS", response);
 	}
 }

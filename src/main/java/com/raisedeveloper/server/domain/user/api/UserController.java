@@ -40,28 +40,28 @@ public class UserController {
 	@GetMapping("/me")
 	public ApiResponse<UserMeResponse> getMe() {
 		Long userId = AuthUtils.resolveUserIdFromContext();
-		return ApiResponse.success("GET_ME_SUCCESS", userService.getMe(userId));
+		return ApiResponse.of("GET_ME_SUCCESS", userService.getMe(userId));
 	}
 
 	@DeleteMapping("/me")
 	public ApiResponse<Object> withdraw() {
 		Long userId = AuthUtils.resolveUserIdFromContext();
 		userService.withdraw(userId);
-		return ApiResponse.success("WITHDRAWAL_SUCCESS", Map.of());
+		return ApiResponse.of("WITHDRAWAL_SUCCESS", Map.of());
 	}
 
 	@GetMapping("/me/onboarding-completed")
 	public ApiResponse<OnboardingResponse> getOnboardingCompleted() {
 		Long userId = AuthUtils.resolveUserIdFromContext();
 		OnboardingResponse res = userService.checkUserOnboardingCompleted(userId);
-		return ApiResponse.success("GET_ONBOARDING_COMPLETED", res);
+		return ApiResponse.of("GET_ONBOARDING_COMPLETED", res);
 	}
 
 	@PostMapping("/me/onboarding-completed")
 	public ApiResponse<Object> markOnboardingCompleted() {
 		Long userId = AuthUtils.resolveUserIdFromContext();
 		userService.markOnboardingCompleted(userId);
-		return ApiResponse.success("GET_ONBOARDING_COMPLETED", Map.of());
+		return ApiResponse.of("GET_ONBOARDING_COMPLETED", Map.of());
 	}
 
 	@PatchMapping("/me/profile/image")
@@ -70,7 +70,7 @@ public class UserController {
 	) {
 		Long userId = AuthUtils.resolveUserIdFromContext();
 		UserProfileResponse response = userService.updateProfileImage(userId, request.imagePath());
-		return ApiResponse.success("UPDATE_PROFILE_IMAGE_SUCCESS", response);
+		return ApiResponse.of("UPDATE_PROFILE_IMAGE_SUCCESS", response);
 	}
 
 	@PatchMapping("/me/profile/nickname")
@@ -79,43 +79,43 @@ public class UserController {
 	) {
 		Long userId = AuthUtils.resolveUserIdFromContext();
 		UserProfileResponse response = userService.updateNickname(userId, request.nickname());
-		return ApiResponse.success("UPDATE_NICKNAME_SUCCESS", response);
+		return ApiResponse.of("UPDATE_NICKNAME_SUCCESS", response);
 	}
 
 	@GetMapping("/me/alarm-settings")
 	public ApiResponse<UserMeAlarmSettingsResponse> getAlarmSettings() {
 		Long userId = AuthUtils.resolveUserIdFromContext();
-		return ApiResponse.success("GET_ME_ALARM_SETTING_SUCCESS", userService.getAlarmSettings(userId));
+		return ApiResponse.of("GET_ME_ALARM_SETTING_SUCCESS", userService.getAlarmSettings(userId));
 	}
 
 	@GetMapping("/me/alarm-settings/dnd")
 	public ApiResponse<AlarmSettingsDndResponse> getAlarmDnd() {
 		Long userId = AuthUtils.resolveUserIdFromContext();
-		return ApiResponse.success("GET_ME_ALARM_SETTING_DND_SUCCESS", userService.getAlarmDnd(userId));
+		return ApiResponse.of("GET_ME_ALARM_SETTING_DND_SUCCESS", userService.getAlarmDnd(userId));
 	}
 
 	@PutMapping("/me/alarm-settings")
 	public ApiResponse<Object> setAlarmSettings(@Valid @RequestBody AlarmSettingsRequest request) {
 		Long userId = AuthUtils.resolveUserIdFromContext();
 		userService.setAlarmSettings(userId, request);
-		return ApiResponse.success("SET_ME_ALARM_SETTING_SUCCESS", Map.of());
+		return ApiResponse.of("SET_ME_ALARM_SETTING_SUCCESS", Map.of());
 	}
 
 	@PutMapping("/me/alarm-settings/dnd")
 	public ApiResponse<Object> updateAlarmDnd(@Valid @RequestBody AlarmSettingsDndRequest request) {
 		Long userId = AuthUtils.resolveUserIdFromContext();
 		userService.updateAlarmDnd(userId, request);
-		return ApiResponse.success("SET_ME_ALARM_SETTING_DND_SUCCESS", Map.of());
+		return ApiResponse.of("SET_ME_ALARM_SETTING_DND_SUCCESS", Map.of());
 	}
 
 	@PostMapping("/me/character")
 	public ApiResponse<CharacterCreateResponse> createCharacter(@Valid @RequestBody CharacterCreateRequest request) {
 		Long userId = AuthUtils.resolveUserIdFromContext();
-		return ApiResponse.success("CREATE_CHARACTER_SUCCESS", userService.createCharacter(userId, request));
+		return ApiResponse.of("CREATE_CHARACTER_SUCCESS", userService.createCharacter(userId, request));
 	}
 
 	@GetMapping("/{userId}")
 	public ApiResponse<UserMeResponse> getUserProfile(@PathVariable Long userId) {
-		return ApiResponse.success("GET_USER_PROFILE_SUCCESS", userService.getUserProfile(userId));
+		return ApiResponse.of("GET_USER_PROFILE_SUCCESS", userService.getUserProfile(userId));
 	}
 }

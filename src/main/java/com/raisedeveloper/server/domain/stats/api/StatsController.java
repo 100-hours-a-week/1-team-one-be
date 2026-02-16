@@ -27,6 +27,6 @@ public class StatsController {
 	) {
 		Long userId = AuthUtils.resolveUserIdFromContext();
 		GrassStatsResponse response = statsService.getGrassStats(userId, viewType, month);
-		return ApiResponse.success("GET_STATS_GRASS_SUCCESS", response);
+		return ApiResponse.of("GET_STATS_GRASS_SUCCESS", response);
 	}
 }
