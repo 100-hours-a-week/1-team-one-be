@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.raisedeveloper.server.global.exception.CustomException;
 import com.raisedeveloper.server.global.exception.ErrorCode;
 import com.raisedeveloper.server.global.exception.ErrorDetail;
-import com.raisedeveloper.server.global.response.ApiResponse;
+import com.raisedeveloper.server.global.response.ErrorResponse;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -47,7 +47,7 @@ public class JwtExceptionFilter extends OncePerRequestFilter {
 		response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 		response.setCharacterEncoding("UTF-8");
 
-		var body = ApiResponse.fail(
+		var body = ErrorResponse.of(
 			ec.getCode(),
 			List.of(ErrorDetail.reasonOnly(ec.getReason()))
 		);
