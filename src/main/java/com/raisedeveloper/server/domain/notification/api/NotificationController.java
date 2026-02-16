@@ -27,7 +27,7 @@ public class NotificationController {
 	@GetMapping("/unread_count")
 	public ApiResponse<NotificationUnreadCountResponse> getUnreadCount() {
 		Long userId = AuthUtils.resolveUserIdFromContext();
-		return ApiResponse.success(
+		return ApiResponse.of(
 			"GET_UNREAD_NOTIFICATIONS_SUCCESS",
 			notificationService.getUnreadCount(userId)
 		);
@@ -39,7 +39,7 @@ public class NotificationController {
 		@RequestParam(value = "cursor", required = false) String cursor
 	) {
 		Long userId = AuthUtils.resolveUserIdFromContext();
-		return ApiResponse.success(
+		return ApiResponse.of(
 			"GET_NOTIFICATIONS_SUCCESS",
 			notificationService.getNotifications(userId, limit, cursor)
 		);
@@ -53,6 +53,6 @@ public class NotificationController {
 			request.oldestNotificationId(),
 			request.latestNotificationId()
 		);
-		return ApiResponse.success("NOTIFICATION_READ_SUCCESS", java.util.Map.of());
+		return ApiResponse.of("NOTIFICATION_READ_SUCCESS", java.util.Map.of());
 	}
 }

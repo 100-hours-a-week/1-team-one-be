@@ -46,31 +46,31 @@ public class AuthController {
 	@PostMapping("/sign-up")
 	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<AuthSignUpResponse> signup(@Valid @RequestBody AuthSignUpRequest request) {
-		return ApiResponse.success("AUTH_SIGNUP_SUCCESS", authService.signup(request));
+		return ApiResponse.of("AUTH_SIGNUP_SUCCESS", authService.signup(request));
 	}
 
 	@PostMapping("/login")
 	public ApiResponse<AuthLoginResponse> login(@Valid @RequestBody AuthLoginRequest request) {
-		return ApiResponse.success("AUTH_LOGIN_SUCCESS", authService.login(request));
+		return ApiResponse.of("AUTH_LOGIN_SUCCESS", authService.login(request));
 	}
 
 	@PostMapping("/refresh")
 	public ApiResponse<AuthRefreshResponse> refresh(@Valid @RequestBody AuthRefreshRequest request) {
-		return ApiResponse.success("AUTH_REFRESH_SUCCESS", authService.refresh(request));
+		return ApiResponse.of("AUTH_REFRESH_SUCCESS", authService.refresh(request));
 	}
 
 	@PostMapping("/logout")
 	public ApiResponse<AuthLogoutResponse> logout() {
 		Long userId = AuthUtils.resolveUserIdFromContext();
 		authService.logoutAll(userId);
-		return ApiResponse.success("LOGOUT_SUCCESS", new AuthLogoutResponse(true));
+		return ApiResponse.of("LOGOUT_SUCCESS", new AuthLogoutResponse(true));
 	}
 
 	@PutMapping("/fcm")
 	public ApiResponse<AuthFcmResponse> setFcmToken(@Valid @RequestBody AuthFcmRequest request) {
 		Long userId = AuthUtils.resolveUserIdFromContext();
 		authService.setFcmToken(userId, request.fcmToken());
-		return ApiResponse.success("SET_FCM_TOKEN_SUCCESS", new AuthFcmResponse());
+		return ApiResponse.of("SET_FCM_TOKEN_SUCCESS", new AuthFcmResponse());
 	}
 
 	@GetMapping("/email-availability")
@@ -79,7 +79,7 @@ public class AuthController {
 		@NotBlank(message = AUTH_EMAIL_REQUIRED_MESSAGE)
 		@RequestParam("email") String email
 	) {
-		return ApiResponse.success(
+		return ApiResponse.of(
 			"USER_EMAIL_AVAILABLE",
 			new AvailabilityResponse(authService.isEmailAvailable(email))
 		);
@@ -92,7 +92,7 @@ public class AuthController {
 		@Pattern(regexp = NICKNAME_REGEX, message = USER_NICKNAME_FORMAT_INVALID_MESSAGE)
 		@RequestParam("nickname") String nickname
 	) {
-		return ApiResponse.success(
+		return ApiResponse.of(
 			"USER_NICKNAME_AVAILABLE",
 			new AvailabilityResponse(authService.isNicknameAvailable(nickname))
 		);

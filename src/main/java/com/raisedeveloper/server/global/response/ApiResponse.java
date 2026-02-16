@@ -11,12 +11,8 @@ public record ApiResponse<T>(
 	T data,
 	List<ErrorDetail> errors
 ) {
-	public static <T> ApiResponse<T> success(String code, T data) {
+	public static <T> ApiResponse<T> of(String code, T data) {
 		return new ApiResponse<>(code, data, null);
-	}
-
-	public static <T> ApiResponse<T> fail(String code, List<ErrorDetail> errors) {
-		return new ApiResponse<>(code, null, errors);
 	}
 }
 

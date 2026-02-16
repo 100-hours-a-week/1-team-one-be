@@ -24,7 +24,7 @@ public class RoutineController {
 	@GetMapping("/users/me/routines")
 	public ApiResponse<RoutinePlanResponse> getMyRoutinePlan() {
 		Long userId = AuthUtils.resolveUserIdFromContext();
-		return ApiResponse.success("GET_ME_ROUTINES_SUCCESS", routineService.getMyRoutine(userId));
+		return ApiResponse.of("GET_ME_ROUTINES_SUCCESS", routineService.getMyRoutine(userId));
 	}
 
 	@PostMapping("routines/callback")
@@ -32,6 +32,6 @@ public class RoutineController {
 		@RequestBody AiRoutineCallbackRequest request
 	) {
 		routineGenerationJobService.handleCallback(request);
-		return ApiResponse.success("AI_ROUTINE_CALLBACK_RECEIVED", java.util.Map.of());
+		return ApiResponse.of("AI_ROUTINE_CALLBACK_RECEIVED", java.util.Map.of());
 	}
 }

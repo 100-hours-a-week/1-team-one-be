@@ -34,7 +34,7 @@ public class PostController {
 	public ApiResponse<PostCreateResponse> createPost(@Valid @RequestBody PostCreateRequest request) {
 		Long userId = AuthUtils.resolveUserIdFromContext();
 		PostCreateResponse res = postService.createPost(userId, request);
-		return ApiResponse.success("CREATE_POST_SUCCESS", res);
+		return ApiResponse.of("CREATE_POST_SUCCESS", res);
 	}
 
 	@PutMapping("/{postId}")
@@ -44,13 +44,13 @@ public class PostController {
 	) {
 		Long userId = AuthUtils.resolveUserIdFromContext();
 		postService.updatePost(userId, postId, request);
-		return ApiResponse.success("UPDATE_POST_SUCCESS", Map.of());
+		return ApiResponse.of("UPDATE_POST_SUCCESS", Map.of());
 	}
 
 	@DeleteMapping("/{postId}")
 	public ApiResponse<Object> deletePost(@PathVariable Long postId) {
 		Long userId = AuthUtils.resolveUserIdFromContext();
 		postService.deletePost(userId, postId);
-		return ApiResponse.success("DELETE_POST_SUCCESS", Map.of());
+		return ApiResponse.of("DELETE_POST_SUCCESS", Map.of());
 	}
 }
