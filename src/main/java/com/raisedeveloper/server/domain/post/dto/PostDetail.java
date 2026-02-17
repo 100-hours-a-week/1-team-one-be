@@ -18,8 +18,14 @@ public record PostDetail(
 	boolean isLiked
 ) {
 
-	public static PostDetail from(Post post, boolean isAuthor, PostAuthor author, List<String> images,
-		List<PostTagInfo> tags) {
+	public static PostDetail from(
+		Post post,
+		boolean isAuthor,
+		PostAuthor author,
+		List<String> images,
+		List<PostTagInfo> tags,
+		boolean isLiked
+	) {
 		return new PostDetail(
 			post.getId(),
 			isAuthor,
@@ -30,7 +36,7 @@ public record PostDetail(
 			tags,
 			post.getLikeCount(),
 			post.getCreatedAt(),
-			false
+			isLiked
 		);
 	}
 }
