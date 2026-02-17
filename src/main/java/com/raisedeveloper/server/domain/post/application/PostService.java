@@ -17,18 +17,23 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.raisedeveloper.server.domain.post.domain.Post;
 import com.raisedeveloper.server.domain.post.domain.PostImage;
+import com.raisedeveloper.server.domain.post.domain.PostLike;
+import com.raisedeveloper.server.domain.post.domain.PostLikeOutbox;
 import com.raisedeveloper.server.domain.post.domain.PostTag;
 import com.raisedeveloper.server.domain.post.domain.Tag;
+import com.raisedeveloper.server.domain.post.dto.PostAuthor;
 import com.raisedeveloper.server.domain.post.dto.PostCreateRequest;
 import com.raisedeveloper.server.domain.post.dto.PostCreateResponse;
-import com.raisedeveloper.server.domain.post.dto.PostAuthor;
 import com.raisedeveloper.server.domain.post.dto.PostDetail;
 import com.raisedeveloper.server.domain.post.dto.PostDetailResponse;
+import com.raisedeveloper.server.domain.post.dto.PostLikeResponse;
 import com.raisedeveloper.server.domain.post.dto.PostListItem;
 import com.raisedeveloper.server.domain.post.dto.PostListResponse;
 import com.raisedeveloper.server.domain.post.dto.PostTagInfo;
 import com.raisedeveloper.server.domain.post.dto.PostUpdateRequest;
 import com.raisedeveloper.server.domain.post.infra.PostImageRepository;
+import com.raisedeveloper.server.domain.post.infra.PostLikeOutboxRepository;
+import com.raisedeveloper.server.domain.post.infra.PostLikeRepository;
 import com.raisedeveloper.server.domain.post.infra.PostRepository;
 import com.raisedeveloper.server.domain.post.infra.PostTagRepository;
 import com.raisedeveloper.server.domain.post.infra.TagRepository;
@@ -42,8 +47,8 @@ import com.raisedeveloper.server.global.exception.CustomException;
 import com.raisedeveloper.server.global.exception.ErrorCode;
 import com.raisedeveloper.server.global.pagination.Cursor;
 import com.raisedeveloper.server.global.pagination.CursorService;
-import com.raisedeveloper.server.global.pagination.PagingResponse;
 import com.raisedeveloper.server.global.pagination.PaginationConstants;
+import com.raisedeveloper.server.global.pagination.PagingResponse;
 
 import lombok.RequiredArgsConstructor;
 
@@ -57,6 +62,8 @@ public class PostService {
 	private final UserCharacterRepository userCharacterRepository;
 	private final PostRepository postRepository;
 	private final PostImageRepository postImageRepository;
+	private final PostLikeRepository postLikeRepository;
+	private final PostLikeOutboxRepository postLikeOutboxRepository;
 	private final TagRepository tagRepository;
 	private final PostTagRepository postTagRepository;
 	private final CursorService cursorService;
@@ -161,13 +168,15 @@ public class PostService {
 
 		boolean isAuthor = viewerUserId != null && viewerUserId.equals(author.getId());
 
+		boolean isLiked = viewerUserId != null && postLikeRepository.existsByPostIdAndUserId(postId, viewerUserId);
+
 		PostAuthor postAuthor = PostAuthor.from(author.getId(), profile, character);
-		PostDetail detail = PostDetail.from(post, isAuthor, postAuthor, images, tags);
+		PostDetail detail = PostDetail.from(post, isAuthor, postAuthor, images, tags, isLiked);
 
 		return new PostDetailResponse(detail);
 	}
 
-	public PostListResponse getPosts(Long authorId, Integer limit, String cursor) {
+	public PostListResponse getPosts(Long authorId, Integer limit, String cursor, Long viewerUserId) {
 		if (authorId != null) {
 			userRepository.findByIdAndDeletedAtIsNull(authorId)
 				.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
@@ -181,9 +190,28 @@ public class PostService {
 			.limit(size)
 			.toList();
 
-		List<PostListItem> items = toPostListItems(sliced);
+		List<PostListItem> items = toPostListItems(sliced, viewerUserId);
 		String nextCursor = buildNextCursor(sliced);
 		return new PostListResponse(items, new PagingResponse(nextCursor, hasNext));
+	}
+
+	@Transactional
+	public PostLikeResponse togglePostLike(Long userId, Long postId, boolean liked) {
+		Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
+			.orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
+		User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+		boolean alreadyLiked = postLikeRepository.existsByPostIdAndUserId(postId, userId);
+		if (liked && !alreadyLiked) {
+			postLikeRepository.save(new PostLike(post, user));
+			postLikeOutboxRepository.save(new PostLikeOutbox(postId, 1));
+		} else if (!liked && alreadyLiked) {
+			postLikeRepository.deleteByPostIdAndUserId(postId, userId);
+			postLikeOutboxRepository.save(new PostLikeOutbox(postId, -1));
+		}
+
+		return new PostLikeResponse(postId, liked);
 	}
 
 	private List<String> normalizeList(List<String> values) {
@@ -306,7 +334,7 @@ public class PostService {
 		return cursorService.encode(last.getCreatedAt(), last.getId());
 	}
 
-	private List<PostListItem> toPostListItems(List<Post> posts) {
+	private List<PostListItem> toPostListItems(List<Post> posts, Long viewerUserId) {
 		if (posts.isEmpty()) {
 			return List.of();
 		}
@@ -337,12 +365,26 @@ public class PostService {
 
 		Map<Long, List<PostTagInfo>> tagsByPostId = loadTagsByPostId(posts);
 
+		Set<Long> likedPostIds;
+		if (viewerUserId != null) {
+			List<Long> postIds = posts.stream()
+				.map(Post::getId)
+				.toList();
+			likedPostIds = Set.copyOf(postLikeRepository.findPostIdsByUserIdAndPostIdIn(viewerUserId, postIds));
+		} else {
+			likedPostIds = Set.of();
+		}
+
 		return posts.stream()
-			.map(post -> PostListItem.from(
-				post,
-				authorByUserId.get(post.getUser().getId()),
-				tagsByPostId.getOrDefault(post.getId(), List.of())
-			))
+			.map(post -> {
+				boolean isLiked = likedPostIds.contains(post.getId());
+				return PostListItem.from(
+					post,
+					authorByUserId.get(post.getUser().getId()),
+					tagsByPostId.getOrDefault(post.getId(), List.of()),
+					isLiked
+				);
+			})
 			.toList();
 	}
 

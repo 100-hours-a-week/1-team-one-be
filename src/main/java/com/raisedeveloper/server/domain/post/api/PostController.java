@@ -18,6 +18,8 @@ import com.raisedeveloper.server.domain.post.application.PostService;
 import com.raisedeveloper.server.domain.post.dto.PostCreateRequest;
 import com.raisedeveloper.server.domain.post.dto.PostCreateResponse;
 import com.raisedeveloper.server.domain.post.dto.PostDetailResponse;
+import com.raisedeveloper.server.domain.post.dto.PostLikeRequest;
+import com.raisedeveloper.server.domain.post.dto.PostLikeResponse;
 import com.raisedeveloper.server.domain.post.dto.PostListResponse;
 import com.raisedeveloper.server.domain.post.dto.PostUpdateRequest;
 import com.raisedeveloper.server.global.response.ApiResponse;
@@ -47,7 +49,8 @@ public class PostController {
 		@RequestParam(value = "cursor", required = false) String cursor,
 		@RequestParam(value = "author-id", required = false) Long authorId
 	) {
-		PostListResponse res = postService.getPosts(authorId, limit, cursor);
+		Long userId = AuthUtils.resolveUserIdFromContextOrNull();
+		PostListResponse res = postService.getPosts(authorId, limit, cursor, userId);
 		return ApiResponse.of("GET_POSTS_SUCCESS", res);
 	}
 
@@ -73,5 +76,15 @@ public class PostController {
 		Long userId = AuthUtils.resolveUserIdFromContextOrNull();
 		PostDetailResponse response = postService.getPostDetail(postId, userId);
 		return ApiResponse.of("GET_POST_DETAIL_SUCCESS", response);
+	}
+
+	@PostMapping("/{postId}/like")
+	public ApiResponse<PostLikeResponse> togglePostLike(
+		@PathVariable Long postId,
+		@Valid @RequestBody PostLikeRequest request
+	) {
+		Long userId = AuthUtils.resolveUserIdFromContext();
+		PostLikeResponse response = postService.togglePostLike(userId, postId, request.liked());
+		return ApiResponse.of("TOGGLE_POST_LIKE_SUCCESS", response);
 	}
 }

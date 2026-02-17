@@ -128,4 +128,5 @@ public final class ErrorMessageConstants {
 	public static final String POST_TAGS_TOO_MANY_MESSAGE = "태그는 최대 5개까지 가능합니다.";
 	public static final String POST_TAG_NAME_BLANK_MESSAGE = "태그 이름은 비어 있을 수 없습니다.";
 	public static final String POST_TAG_NAME_TOO_LONG_MESSAGE = "태그 이름은 최대 10자까지 가능합니다.";
+	public static final String POST_LIKED_REQUIRED_MESSAGE = "좋아요 상태는 필수입니다.";
 }

@@ -16,7 +16,7 @@ public record PostListItem(
 	LocalDateTime createdAt,
 	boolean isLiked
 ) {
-	public static PostListItem from(Post post, PostAuthor author, List<PostTagInfo> tags) {
+	public static PostListItem from(Post post, PostAuthor author, List<PostTagInfo> tags, boolean isLiked) {
 		return new PostListItem(
 			post.getId(),
 			author,
@@ -26,7 +26,7 @@ public record PostListItem(
 			tags,
 			post.getLikeCount(),
 			post.getCreatedAt(),
-			false
+			isLiked
 		);
 	}
 }
