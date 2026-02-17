@@ -24,21 +24,16 @@ public class PostLikeOutbox extends CreatedAtEntity {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	@Column(name = "post_id", nullable = false)
+	@Column(nullable = false)
 	private Long postId;
 
 	@Column(nullable = false)
 	private int delta;
 
-	@Column(name = "processed_at")
 	private LocalDateTime processedAt;
 
 	public PostLikeOutbox(Long postId, int delta) {
 		this.postId = postId;
 		this.delta = delta;
-	}
-
-	public void markProcessed(LocalDateTime processedAt) {
-		this.processedAt = processedAt;
 	}
 }
