@@ -176,22 +176,24 @@ public class PostService {
 		return new PostDetailResponse(detail);
 	}
 
-	public PostListResponse getPosts(Long authorId, Integer limit, String cursor, Long viewerUserId) {
+	public PostListResponse getPosts(Long authorId, List<String> tagNames, Integer limit, String cursor,
+		Long viewerUserId) {
 		if (authorId != null) {
 			userRepository.findByIdAndDeletedAtIsNull(authorId)
 				.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 		}
 
+		List<String> normalizedTagNames = normalizeTagNames(tagNames);
 		int size = normalizeLimit(limit);
 		Cursor decoded = cursorService.decode(cursor);
-		List<Post> posts = fetchPosts(authorId, size, decoded);
-		boolean hasNext = posts.size() > size;
-		List<Post> sliced = posts.stream()
-			.limit(size)
-			.toList();
 
+		List<Post> posts = fetchPosts(authorId, normalizedTagNames, size, decoded);
+		List<Post> sliced = posts.stream().limit(size).toList();
 		List<PostListItem> items = toPostListItems(sliced, viewerUserId);
+
+		boolean hasNext = posts.size() > size;
 		String nextCursor = buildNextCursor(sliced);
+
 		return new PostListResponse(items, new PagingResponse(nextCursor, hasNext));
 	}
 
@@ -307,19 +309,34 @@ public class PostService {
 		return Math.min(PaginationConstants.POST_MAX_LIMIT, normalized);
 	}
 
-	private List<Post> fetchPosts(Long authorId, int size, Cursor cursor) {
+	private List<Post> fetchPosts(Long authorId, List<String> tagNames, int size, Cursor cursor) {
 		PageRequest pageable = PageRequest.of(0, size + 1);
-		if (authorId == null) {
+		boolean hasTagNames = !tagNames.isEmpty();
+		if (authorId == null && !hasTagNames) {
 			if (cursor == null) {
 				return postRepository.findPage(pageable);
 			}
 			return postRepository.findPageByCursor(cursor.createdAt(), cursor.id(), pageable);
 		}
-		if (cursor == null) {
-			return postRepository.findPageByAuthorId(authorId, pageable);
+
+		if (authorId == null) {
+			if (cursor == null) {
+				return postRepository.findPageByTagNames(tagNames, pageable);
+			}
+			return postRepository.findPageByTagNamesAndCursor(tagNames, cursor.createdAt(), cursor.id(), pageable);
 		}
-		return postRepository.findPageByAuthorIdAndCursor(
-			authorId,
+
+		if (!hasTagNames) {
+			if (cursor == null) {
+				return postRepository.findPageByAuthorId(authorId, pageable);
+			}
+			return postRepository.findPageByAuthorIdAndCursor(authorId, cursor.createdAt(), cursor.id(), pageable);
+		}
+
+		if (cursor == null) {
+			return postRepository.findPageByAuthorIdAndTagNames(authorId, tagNames, pageable);
+		}
+		return postRepository.findPageByAuthorIdAndTagNamesAndCursor(authorId, tagNames,
 			cursor.createdAt(),
 			cursor.id(),
 			pageable
@@ -404,5 +421,13 @@ public class PostService {
 			tagsByPostId.computeIfAbsent(postId, key -> new ArrayList<>()).add(info);
 		}
 		return tagsByPostId;
+	}
+
+	private List<String> normalizeTagNames(List<String> tagNames) {
+		List<String> normalized = normalizeDistinctList(tagNames);
+		if (normalized.size() > 5) {
+			throw new CustomException(ErrorCode.VALIDATION_FAILED);
+		}
+		return normalized;
 	}
 }
