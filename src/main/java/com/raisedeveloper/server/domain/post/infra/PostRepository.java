@@ -25,6 +25,17 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 	List<Post> findPage(Pageable pageable);
 
 	@Query("""
+		SELECT DISTINCT p FROM Post p
+		JOIN FETCH p.user
+		JOIN PostTag pt ON pt.post = p
+		JOIN pt.tag t
+		WHERE p.deletedAt IS NULL
+			AND t.name IN :tagNames
+		ORDER BY p.createdAt DESC, p.id DESC
+		""")
+	List<Post> findPageByTagNames(@Param("tagNames") List<String> tagNames, Pageable pageable);
+
+	@Query("""
 		SELECT p FROM Post p
 		JOIN FETCH p.user
 		WHERE p.deletedAt IS NULL
@@ -32,6 +43,23 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 		ORDER BY p.createdAt DESC, p.id DESC
 		""")
 	List<Post> findPageByCursor(
+		@Param("createdAt") LocalDateTime createdAt,
+		@Param("id") Long id,
+		Pageable pageable
+	);
+
+	@Query("""
+		SELECT DISTINCT p FROM Post p
+		JOIN FETCH p.user
+		JOIN PostTag pt ON pt.post = p
+		JOIN pt.tag t
+		WHERE p.deletedAt IS NULL
+			AND t.name IN :tagNames
+			AND (p.createdAt < :createdAt OR (p.createdAt = :createdAt AND p.id < :id))
+		ORDER BY p.createdAt DESC, p.id DESC
+		""")
+	List<Post> findPageByTagNamesAndCursor(
+		@Param("tagNames") List<String> tagNames,
 		@Param("createdAt") LocalDateTime createdAt,
 		@Param("id") Long id,
 		Pageable pageable
@@ -46,6 +74,21 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 	List<Post> findPageByAuthorId(@Param("authorId") Long authorId, Pageable pageable);
 
 	@Query("""
+		SELECT DISTINCT p FROM Post p
+		JOIN PostTag pt ON pt.post = p
+		JOIN pt.tag t
+		WHERE p.deletedAt IS NULL
+			AND p.user.id = :authorId
+			AND t.name IN :tagNames
+		ORDER BY p.createdAt DESC, p.id DESC
+		""")
+	List<Post> findPageByAuthorIdAndTagNames(
+		@Param("authorId") Long authorId,
+		@Param("tagNames") List<String> tagNames,
+		Pageable pageable
+	);
+
+	@Query("""
 		SELECT p FROM Post p
 		WHERE p.deletedAt IS NULL
 			AND p.user.id = :authorId
@@ -54,6 +97,24 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 		""")
 	List<Post> findPageByAuthorIdAndCursor(
 		@Param("authorId") Long authorId,
+		@Param("createdAt") LocalDateTime createdAt,
+		@Param("id") Long id,
+		Pageable pageable
+	);
+
+	@Query("""
+		SELECT DISTINCT p FROM Post p
+		JOIN PostTag pt ON pt.post = p
+		JOIN pt.tag t
+		WHERE p.deletedAt IS NULL
+			AND p.user.id = :authorId
+			AND t.name IN :tagNames
+			AND (p.createdAt < :createdAt OR (p.createdAt = :createdAt AND p.id < :id))
+		ORDER BY p.createdAt DESC, p.id DESC
+		""")
+	List<Post> findPageByAuthorIdAndTagNamesAndCursor(
+		@Param("authorId") Long authorId,
+		@Param("tagNames") List<String> tagNames,
 		@Param("createdAt") LocalDateTime createdAt,
 		@Param("id") Long id,
 		Pageable pageable
