@@ -1,5 +1,6 @@
 package com.raisedeveloper.server.domain.post.api;
 
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
@@ -47,10 +48,11 @@ public class PostController {
 	public ApiResponse<PostListResponse> getPosts(
 		@RequestParam(value = "limit", required = false) Integer limit,
 		@RequestParam(value = "cursor", required = false) String cursor,
-		@RequestParam(value = "author-id", required = false) Long authorId
+		@RequestParam(value = "author-id", required = false) Long authorId,
+		@RequestParam(value = "tag", required = false) List<String> tagNames
 	) {
 		Long userId = AuthUtils.resolveUserIdFromContextOrNull();
-		PostListResponse res = postService.getPosts(authorId, limit, cursor, userId);
+		PostListResponse res = postService.getPosts(authorId, tagNames, limit, cursor, userId);
 		return ApiResponse.of("GET_POSTS_SUCCESS", res);
 	}
 
