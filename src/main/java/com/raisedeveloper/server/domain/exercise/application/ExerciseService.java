@@ -3,6 +3,7 @@ package com.raisedeveloper.server.domain.exercise.application;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -57,6 +58,7 @@ public class ExerciseService {
 		return savedSession;
 	}
 
+	@Cacheable(cacheNames = "exerciseList")
 	public ExerciseListResponse getAllExercises() {
 		List<ExerciseResponse> exercises = exerciseRepository.findByIsDeprecatedFalse()
 			.stream()
