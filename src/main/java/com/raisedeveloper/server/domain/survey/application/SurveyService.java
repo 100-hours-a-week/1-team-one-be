@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,6 +50,7 @@ public class SurveyService {
 	private final UserRepository userRepository;
 	private final RoutineGenerationJobService routineGenerationJobService;
 
+	@Cacheable(cacheNames = "surveyDetail")
 	public SurveyDetailResponse getSurvey() {
 		Survey survey = surveyRepository.findFirstByIsActiveTrueOrderByVersionDesc()
 			.orElseThrow(() -> new CustomException(ErrorCode.SURVEY_NOT_FOUND));
