@@ -26,7 +26,7 @@ import com.raisedeveloper.server.domain.auth.dto.AuthSignUpRequest;
 import com.raisedeveloper.server.domain.auth.dto.AuthSignUpResponse;
 import com.raisedeveloper.server.domain.auth.dto.AvailabilityResponse;
 import com.raisedeveloper.server.global.response.ApiResponse;
-import com.raisedeveloper.server.global.security.utils.AuthUtils;
+import com.raisedeveloper.server.global.security.currentuser.CurrentUser;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -60,15 +60,16 @@ public class AuthController {
 	}
 
 	@PostMapping("/logout")
-	public ApiResponse<AuthLogoutResponse> logout() {
-		Long userId = AuthUtils.resolveUserIdFromContext();
+	public ApiResponse<AuthLogoutResponse> logout(@CurrentUser Long userId) {
 		authService.logoutAll(userId);
 		return ApiResponse.of("LOGOUT_SUCCESS", new AuthLogoutResponse(true));
 	}
 
 	@PutMapping("/fcm")
-	public ApiResponse<AuthFcmResponse> setFcmToken(@Valid @RequestBody AuthFcmRequest request) {
-		Long userId = AuthUtils.resolveUserIdFromContext();
+	public ApiResponse<AuthFcmResponse> setFcmToken(
+		@CurrentUser Long userId,
+		@Valid @RequestBody AuthFcmRequest request
+	) {
 		authService.setFcmToken(userId, request.fcmToken());
 		return ApiResponse.of("SET_FCM_TOKEN_SUCCESS", new AuthFcmResponse());
 	}

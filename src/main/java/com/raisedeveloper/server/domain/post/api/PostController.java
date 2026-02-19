@@ -24,7 +24,7 @@ import com.raisedeveloper.server.domain.post.dto.PostLikeResponse;
 import com.raisedeveloper.server.domain.post.dto.PostListResponse;
 import com.raisedeveloper.server.domain.post.dto.PostUpdateRequest;
 import com.raisedeveloper.server.global.response.ApiResponse;
-import com.raisedeveloper.server.global.security.utils.AuthUtils;
+import com.raisedeveloper.server.global.security.currentuser.CurrentUser;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -38,54 +38,60 @@ public class PostController {
 
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<PostCreateResponse> createPost(@Valid @RequestBody PostCreateRequest request) {
-		Long userId = AuthUtils.resolveUserIdFromContext();
+	public ApiResponse<PostCreateResponse> createPost(
+		@CurrentUser Long userId,
+		@Valid @RequestBody PostCreateRequest request
+	) {
 		PostCreateResponse res = postService.createPost(userId, request);
 		return ApiResponse.of("CREATE_POST_SUCCESS", res);
 	}
 
 	@GetMapping
 	public ApiResponse<PostListResponse> getPosts(
+		@CurrentUser(required = false) Long userId,
 		@RequestParam(value = "limit", required = false) Integer limit,
 		@RequestParam(value = "cursor", required = false) String cursor,
 		@RequestParam(value = "author-id", required = false) Long authorId,
 		@RequestParam(value = "tag", required = false) List<String> tagNames
 	) {
-		Long userId = AuthUtils.resolveUserIdFromContextOrNull();
 		PostListResponse res = postService.getPosts(authorId, tagNames, limit, cursor, userId);
 		return ApiResponse.of("GET_POSTS_SUCCESS", res);
 	}
 
 	@PutMapping("/{postId}")
 	public ApiResponse<Object> updatePost(
+		@CurrentUser Long userId,
 		@PathVariable Long postId,
 		@Valid @RequestBody PostUpdateRequest request
 	) {
-		Long userId = AuthUtils.resolveUserIdFromContext();
 		postService.updatePost(userId, postId, request);
 		return ApiResponse.of("UPDATE_POST_SUCCESS", Map.of());
 	}
 
 	@DeleteMapping("/{postId}")
-	public ApiResponse<Object> deletePost(@PathVariable Long postId) {
-		Long userId = AuthUtils.resolveUserIdFromContext();
+	public ApiResponse<Object> deletePost(
+		@CurrentUser Long userId,
+		@PathVariable Long postId
+	) {
 		postService.deletePost(userId, postId);
 		return ApiResponse.of("DELETE_POST_SUCCESS", Map.of());
 	}
 
 	@GetMapping("/{postId}")
-	public ApiResponse<PostDetailResponse> getPostDetail(@PathVariable Long postId) {
-		Long userId = AuthUtils.resolveUserIdFromContextOrNull();
+	public ApiResponse<PostDetailResponse> getPostDetail(
+		@CurrentUser(required = false) Long userId,
+		@PathVariable Long postId
+	) {
 		PostDetailResponse response = postService.getPostDetail(postId, userId);
 		return ApiResponse.of("GET_POST_DETAIL_SUCCESS", response);
 	}
 
 	@PostMapping("/{postId}/like")
 	public ApiResponse<PostLikeResponse> togglePostLike(
+		@CurrentUser Long userId,
 		@PathVariable Long postId,
 		@Valid @RequestBody PostLikeRequest request
 	) {
-		Long userId = AuthUtils.resolveUserIdFromContext();
 		PostLikeResponse response = postService.togglePostLike(userId, postId, request.liked());
 		return ApiResponse.of("TOGGLE_POST_LIKE_SUCCESS", response);
 	}

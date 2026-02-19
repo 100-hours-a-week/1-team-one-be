@@ -14,7 +14,7 @@ import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionUpdateRequest;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionValidListResponse;
 import com.raisedeveloper.server.global.response.ApiResponse;
-import com.raisedeveloper.server.global.security.utils.AuthUtils;
+import com.raisedeveloper.server.global.security.currentuser.CurrentUser;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,26 +32,27 @@ public class ExerciseController {
 	}
 
 	@GetMapping("/me/exercise-sessions/valid")
-	public ApiResponse<ExerciseSessionValidListResponse> getValidExerciseSessions() {
-		Long userId = AuthUtils.resolveUserIdFromContext();
+	public ApiResponse<ExerciseSessionValidListResponse> getValidExerciseSessions(@CurrentUser Long userId) {
 		ExerciseSessionValidListResponse response = exerciseSessionService
 			.getValidExerciseSessions(userId);
 		return ApiResponse.of("GET_VALID_EXERCISE_SESSION_SUCCESS", response);
 	}
 
 	@GetMapping("/me/exercise-sessions/{sessionId}")
-	public ApiResponse<ExerciseSessionResponse> getExerciseSession(@PathVariable Long sessionId) {
-		Long userId = AuthUtils.resolveUserIdFromContext();
+	public ApiResponse<ExerciseSessionResponse> getExerciseSession(
+		@CurrentUser Long userId,
+		@PathVariable Long sessionId
+	) {
 		ExerciseSessionResponse response = exerciseSessionService.getExerciseSession(userId, sessionId);
-		return ApiResponse.of("_GET_SESSION_SUCCESS", response);
+		return ApiResponse.of("GET_SESSION_SUCCESS", response);
 	}
 
 	@PatchMapping("/me/exercise-sessions/{sessionId}")
 	public ApiResponse<ExerciseSessionCompleteResponse> updateExerciseSession(
+		@CurrentUser Long userId,
 		@PathVariable Long sessionId,
 		@Valid @RequestBody ExerciseSessionUpdateRequest request
 	) {
-		Long userId = AuthUtils.resolveUserIdFromContext();
 		ExerciseSessionCompleteResponse response = exerciseSessionService.completeExerciseSession(userId, sessionId,
 			request);
 		return ApiResponse.of("COMPLETE_EXERCISE_SESSION_SUCCESS", response);

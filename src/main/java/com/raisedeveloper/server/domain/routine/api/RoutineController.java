@@ -10,7 +10,7 @@ import com.raisedeveloper.server.domain.routine.application.RoutineService;
 import com.raisedeveloper.server.domain.routine.dto.AiRoutineCallbackRequest;
 import com.raisedeveloper.server.domain.routine.dto.RoutinePlanResponse;
 import com.raisedeveloper.server.global.response.ApiResponse;
-import com.raisedeveloper.server.global.security.utils.AuthUtils;
+import com.raisedeveloper.server.global.security.currentuser.CurrentUser;
 
 import lombok.RequiredArgsConstructor;
 
@@ -22,8 +22,7 @@ public class RoutineController {
 	private final RoutineGenerationJobService routineGenerationJobService;
 
 	@GetMapping("/users/me/routines")
-	public ApiResponse<RoutinePlanResponse> getMyRoutinePlan() {
-		Long userId = AuthUtils.resolveUserIdFromContext();
+	public ApiResponse<RoutinePlanResponse> getMyRoutinePlan(@CurrentUser Long userId) {
 		return ApiResponse.of("GET_ME_ROUTINES_SUCCESS", routineService.getMyRoutine(userId));
 	}
 
