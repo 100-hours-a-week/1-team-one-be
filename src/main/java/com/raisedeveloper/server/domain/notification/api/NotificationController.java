@@ -12,7 +12,7 @@ import com.raisedeveloper.server.domain.notification.dto.NotificationListRespons
 import com.raisedeveloper.server.domain.notification.dto.NotificationReadRequest;
 import com.raisedeveloper.server.domain.notification.dto.NotificationUnreadCountResponse;
 import com.raisedeveloper.server.global.response.ApiResponse;
-import com.raisedeveloper.server.global.security.utils.AuthUtils;
+import com.raisedeveloper.server.global.security.currentuser.CurrentUser;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,8 +25,7 @@ public class NotificationController {
 	private final NotificationService notificationService;
 
 	@GetMapping("/unread_count")
-	public ApiResponse<NotificationUnreadCountResponse> getUnreadCount() {
-		Long userId = AuthUtils.resolveUserIdFromContext();
+	public ApiResponse<NotificationUnreadCountResponse> getUnreadCount(@CurrentUser Long userId) {
 		return ApiResponse.of(
 			"GET_UNREAD_NOTIFICATIONS_SUCCESS",
 			notificationService.getUnreadCount(userId)
@@ -35,10 +34,10 @@ public class NotificationController {
 
 	@GetMapping
 	public ApiResponse<NotificationListResponse> getNotifications(
+		@CurrentUser Long userId,
 		@RequestParam(value = "limit", required = false) Integer limit,
 		@RequestParam(value = "cursor", required = false) String cursor
 	) {
-		Long userId = AuthUtils.resolveUserIdFromContext();
 		return ApiResponse.of(
 			"GET_NOTIFICATIONS_SUCCESS",
 			notificationService.getNotifications(userId, limit, cursor)
@@ -46,8 +45,10 @@ public class NotificationController {
 	}
 
 	@PostMapping
-	public ApiResponse<Object> markRead(@Valid @RequestBody NotificationReadRequest request) {
-		Long userId = AuthUtils.resolveUserIdFromContext();
+	public ApiResponse<Object> markRead(
+		@CurrentUser Long userId,
+		@Valid @RequestBody NotificationReadRequest request
+	) {
 		notificationService.markReadRange(
 			userId,
 			request.oldestNotificationId(),

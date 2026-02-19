@@ -19,6 +19,7 @@ import org.springframework.stereotype.Component;
 import com.raisedeveloper.server.domain.common.enums.Role;
 import com.raisedeveloper.server.global.exception.CustomException;
 import com.raisedeveloper.server.global.exception.ErrorCode;
+import com.raisedeveloper.server.global.security.currentuser.CurrentUserPrincipal;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -109,9 +110,8 @@ public class JwtTokenProvider {
 
 		var authority = new SimpleGrantedAuthority(claims.role().toAuthority());
 
-		var auth = new UsernamePasswordAuthenticationToken(claims.email(), null, java.util.List.of(authority));
-		auth.setDetails(Map.of("userId", claims.userId(), "tokenType", claims.tokenType()));
-		return auth;
+		var principal = new CurrentUserPrincipal(claims.userId(), claims.email(), claims.role(), claims.tokenType());
+		return new UsernamePasswordAuthenticationToken(principal, null, java.util.List.of(authority));
 	}
 
 	private Jws<Claims> parseJws(String token, TokenType expectedTokenType) {

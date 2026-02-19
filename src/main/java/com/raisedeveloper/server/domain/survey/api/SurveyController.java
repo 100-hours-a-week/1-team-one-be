@@ -12,7 +12,7 @@ import com.raisedeveloper.server.domain.survey.dto.SurveyDetailResponse;
 import com.raisedeveloper.server.domain.survey.dto.SurveySubmissionRequest;
 import com.raisedeveloper.server.domain.survey.dto.SurveySubmissionResponse;
 import com.raisedeveloper.server.global.response.ApiResponse;
-import com.raisedeveloper.server.global.security.utils.AuthUtils;
+import com.raisedeveloper.server.global.security.currentuser.CurrentUser;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,17 +24,16 @@ public class SurveyController {
 	private final SurveyService surveyService;
 
 	@GetMapping("/survey")
-	public ApiResponse<SurveyDetailResponse> getSurvey() {
-		AuthUtils.resolveUserIdFromContext();
+	public ApiResponse<SurveyDetailResponse> getSurvey(@CurrentUser Long userId) {
 		return ApiResponse.of("GET_SURVEY_SUCCESS", surveyService.getSurvey());
 	}
 
 	@PostMapping("/survey-submission")
 	@ResponseStatus(HttpStatus.ACCEPTED)
 	public ApiResponse<SurveySubmissionResponse> submitSurvey(
+		@CurrentUser Long userId,
 		@Valid @RequestBody SurveySubmissionRequest request
 	) {
-		Long userId = AuthUtils.resolveUserIdFromContext();
 		return ApiResponse.of(
 			"CREATE_SURVEY_SUBMISSION_SUCCESS",
 			surveyService.submitSurvey(userId, request)
