@@ -9,6 +9,7 @@ import com.raisedeveloper.server.domain.exercise.domain.ExerciseSession;
 import com.raisedeveloper.server.domain.exercise.dto.CharacterDto;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionCompleteResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionUpdateRequest;
+import com.raisedeveloper.server.domain.exercise.mapper.ExerciseSessionMapper;
 import com.raisedeveloper.server.domain.notification.application.NotificationService;
 import com.raisedeveloper.server.domain.user.application.SessionRewardResult;
 import com.raisedeveloper.server.domain.user.application.UserCharacterService;
@@ -24,6 +25,7 @@ public class ExerciseSessionFacade {
 	private final ExerciseSessionService exerciseSessionService;
 	private final UserCharacterService userCharacterService;
 	private final NotificationService notificationService;
+	private final ExerciseSessionMapper exerciseSessionMapper;
 
 	@Transactional
 	public ExerciseSessionCompleteResponse completeExerciseSession(
@@ -44,12 +46,7 @@ public class ExerciseSessionFacade {
 
 		int earnedExp = rewardResult.earnedExp();
 		int earnedStatusScore = rewardResult.earnedStatusScore();
-		CharacterDto characterDto = new CharacterDto(
-			rewardResult.character().getLevel(),
-			rewardResult.character().getExp(),
-			rewardResult.character().getStreak(),
-			rewardResult.character().getStatusScore()
-		);
+		CharacterDto characterDto = exerciseSessionMapper.toCharacterDto(rewardResult.character());
 
 		log.info("Exercise session completed: sessionId={}, userId={}, earnedExp={}, earnedStatusScore={}",
 			sessionId, userId, earnedExp, earnedStatusScore);
@@ -60,9 +57,8 @@ public class ExerciseSessionFacade {
 			notificationService.createStretchingSuccess(session.getUser(), earnedExp);
 		}
 
-		return new ExerciseSessionCompleteResponse(
+		return exerciseSessionMapper.toCompleteResponse(
 			sessionId,
-			true,
 			earnedExp,
 			earnedStatusScore,
 			characterDto,

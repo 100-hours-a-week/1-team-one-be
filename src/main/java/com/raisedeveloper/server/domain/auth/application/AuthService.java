@@ -18,6 +18,7 @@ import com.raisedeveloper.server.domain.auth.dto.AuthRefreshResponse;
 import com.raisedeveloper.server.domain.auth.dto.AuthSignUpRequest;
 import com.raisedeveloper.server.domain.auth.dto.AuthSignUpResponse;
 import com.raisedeveloper.server.domain.auth.dto.Tokens;
+import com.raisedeveloper.server.domain.auth.mapper.AuthMapper;
 import com.raisedeveloper.server.domain.auth.infra.FcmTokenRepository;
 import com.raisedeveloper.server.domain.auth.infra.RefreshTokenRepository;
 import com.raisedeveloper.server.domain.user.domain.User;
@@ -46,6 +47,7 @@ public class AuthService {
 	private final PasswordEncoder passwordEncoder;
 	private final TokenHasher tokenHasher;
 	private final JwtTokenProvider jwtTokenProvider;
+	private final AuthMapper authMapper;
 
 	@Transactional
 	public AuthSignUpResponse signup(AuthSignUpRequest request) {
@@ -58,7 +60,7 @@ public class AuthService {
 
 		User userSaved = userRepository.save(user);
 		userProfileRepository.save(profile);
-		return AuthSignUpResponse.from(userSaved);
+		return authMapper.toSignUpResponse(userSaved);
 	}
 
 	@Transactional
@@ -77,7 +79,7 @@ public class AuthService {
 		String tokenHash = tokenHasher.hmacSha256Base64Url(refreshToken.token());
 		refreshTokenRepository.save(new RefreshToken(user, tokenHash, refreshToken.expiresAt()));
 
-		return AuthLoginResponse.from(tokens, user);
+		return authMapper.toLoginResponse(tokens, user);
 	}
 
 	@Transactional

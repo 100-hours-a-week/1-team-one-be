@@ -24,6 +24,7 @@ import com.raisedeveloper.server.domain.user.infra.UserAlarmSettingsRepository;
 import com.raisedeveloper.server.domain.user.infra.UserCharacterRepository;
 import com.raisedeveloper.server.domain.user.infra.UserProfileRepository;
 import com.raisedeveloper.server.domain.user.infra.UserRepository;
+import com.raisedeveloper.server.domain.user.mapper.UserMapper;
 import com.raisedeveloper.server.global.exception.CustomException;
 import com.raisedeveloper.server.global.exception.ErrorCode;
 import com.raisedeveloper.server.global.exception.ErrorDetail;
@@ -41,6 +42,7 @@ public class UserService {
 	private final AlarmScheduleService alarmScheduleService;
 	private final UserCharacterRepository userCharacterRepository;
 	private final UserProfileRepository userProfileRepository;
+	private final UserMapper userMapper;
 
 	@Transactional
 	public UserMeResponse getMe(Long userId) {
@@ -53,7 +55,7 @@ public class UserService {
 		UserCharacter character = userCharacterRepository.findByUserId(userId).orElseThrow(
 			() -> new CustomException(ErrorCode.CHARACTER_NOT_SET)
 		);
-		return UserMeResponse.from(user, profile, character);
+		return userMapper.toMeResponse(user, profile, character);
 	}
 
 	@Transactional
@@ -67,7 +69,7 @@ public class UserService {
 		UserCharacter character = userCharacterRepository.findByUserId(userId).orElseThrow(
 			() -> new CustomException(ErrorCode.CHARACTER_NOT_SET)
 		);
-		return UserMeResponse.from(user, profile, character);
+		return userMapper.toMeResponse(user, profile, character);
 	}
 
 	@Transactional
@@ -79,7 +81,7 @@ public class UserService {
 			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
 		);
 		profile.updateImagePath(imagePath);
-		return UserProfileResponse.from(profile);
+		return userMapper.toProfileResponse(profile);
 	}
 
 	@Transactional
@@ -97,7 +99,7 @@ public class UserService {
 			);
 		}
 		profile.updateNickname(nickname);
-		return UserProfileResponse.from(profile);
+		return userMapper.toProfileResponse(profile);
 	}
 
 	@Transactional
@@ -119,7 +121,7 @@ public class UserService {
 			.orElseThrow(
 				() -> new CustomException(ErrorCode.ALARM_SETTING_NOT_FOUND));
 
-		return UserMeAlarmSettingsResponse.from(settings);
+		return userMapper.toAlarmSettingsResponse(settings);
 	}
 
 	@Transactional
@@ -132,7 +134,7 @@ public class UserService {
 			.orElseThrow(
 				() -> new CustomException(ErrorCode.ALARM_SETTING_NOT_FOUND));
 
-		return AlarmSettingsDndResponse.from(settings);
+		return userMapper.toAlarmSettingsDndResponse(settings);
 	}
 
 	@Transactional

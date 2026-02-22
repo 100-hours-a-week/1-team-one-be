@@ -37,6 +37,7 @@ import com.raisedeveloper.server.domain.post.infra.PostLikeRepository;
 import com.raisedeveloper.server.domain.post.infra.PostRepository;
 import com.raisedeveloper.server.domain.post.infra.PostTagRepository;
 import com.raisedeveloper.server.domain.post.infra.TagRepository;
+import com.raisedeveloper.server.domain.post.mapper.PostMapper;
 import com.raisedeveloper.server.domain.user.domain.User;
 import com.raisedeveloper.server.domain.user.domain.UserCharacter;
 import com.raisedeveloper.server.domain.user.domain.UserProfile;
@@ -67,6 +68,7 @@ public class PostService {
 	private final TagRepository tagRepository;
 	private final PostTagRepository postTagRepository;
 	private final CursorService cursorService;
+	private final PostMapper postMapper;
 
 	@Transactional
 	public PostCreateResponse createPost(Long userId, PostCreateRequest request) {
@@ -163,15 +165,15 @@ public class PostService {
 
 		List<PostTagInfo> tags = postTagRepository.findTagsByPostId(post.getId())
 			.stream()
-			.map(tag -> new PostTagInfo(tag.getId(), tag.getName()))
+			.map(postMapper::toTagInfo)
 			.toList();
 
 		boolean isAuthor = viewerUserId != null && viewerUserId.equals(author.getId());
 
 		boolean isLiked = viewerUserId != null && postLikeRepository.existsByPostIdAndUserId(postId, viewerUserId);
 
-		PostAuthor postAuthor = PostAuthor.from(author.getId(), profile, character);
-		PostDetail detail = PostDetail.from(post, isAuthor, postAuthor, images, tags, isLiked);
+		PostAuthor postAuthor = postMapper.toPostAuthor(author.getId(), profile, character);
+		PostDetail detail = postMapper.toPostDetail(post, isAuthor, postAuthor, images, tags, isLiked);
 
 		return new PostDetailResponse(detail);
 	}
@@ -377,7 +379,7 @@ public class PostService {
 		for (Long userId : userIds) {
 			UserProfile profile = profileByUserId.get(userId);
 			UserCharacter character = characterByUserId.get(userId);
-			authorByUserId.put(userId, PostAuthor.from(userId, profile, character));
+			authorByUserId.put(userId, postMapper.toPostAuthor(userId, profile, character));
 		}
 
 		Map<Long, List<PostTagInfo>> tagsByPostId = loadTagsByPostId(posts);
@@ -395,7 +397,7 @@ public class PostService {
 		return posts.stream()
 			.map(post -> {
 				boolean isLiked = likedPostIds.contains(post.getId());
-				return PostListItem.from(
+				return postMapper.toPostListItem(
 					post,
 					authorByUserId.get(post.getUser().getId()),
 					tagsByPostId.getOrDefault(post.getId(), List.of()),
@@ -417,7 +419,7 @@ public class PostService {
 		List<PostTag> postTags = postTagRepository.findByPostIdIn(postIds);
 		for (PostTag postTag : postTags) {
 			Long postId = postTag.getPost().getId();
-			PostTagInfo info = new PostTagInfo(postTag.getTag().getId(), postTag.getTag().getName());
+			PostTagInfo info = postMapper.toTagInfo(postTag);
 			tagsByPostId.computeIfAbsent(postId, key -> new ArrayList<>()).add(info);
 		}
 		return tagsByPostId;

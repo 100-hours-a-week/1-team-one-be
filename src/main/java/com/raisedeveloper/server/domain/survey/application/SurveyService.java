@@ -19,8 +19,6 @@ import com.raisedeveloper.server.domain.survey.domain.SurveyQuestion;
 import com.raisedeveloper.server.domain.survey.domain.SurveyResponse;
 import com.raisedeveloper.server.domain.survey.domain.SurveySubmission;
 import com.raisedeveloper.server.domain.survey.dto.SurveyDetailResponse;
-import com.raisedeveloper.server.domain.survey.dto.SurveyOptionResponse;
-import com.raisedeveloper.server.domain.survey.dto.SurveyQuestionResponse;
 import com.raisedeveloper.server.domain.survey.dto.SurveySubmissionAnswerRequest;
 import com.raisedeveloper.server.domain.survey.dto.SurveySubmissionRequest;
 import com.raisedeveloper.server.domain.survey.dto.SurveySubmissionResponse;
@@ -29,6 +27,7 @@ import com.raisedeveloper.server.domain.survey.infra.SurveyQuestionRepository;
 import com.raisedeveloper.server.domain.survey.infra.SurveyRepository;
 import com.raisedeveloper.server.domain.survey.infra.SurveyResponseRepository;
 import com.raisedeveloper.server.domain.survey.infra.SurveySubmissionRepository;
+import com.raisedeveloper.server.domain.survey.mapper.SurveyMapper;
 import com.raisedeveloper.server.domain.user.domain.User;
 import com.raisedeveloper.server.domain.user.infra.UserRepository;
 import com.raisedeveloper.server.global.exception.CustomException;
@@ -49,6 +48,7 @@ public class SurveyService {
 	private final SurveyResponseRepository surveyResponseRepository;
 	private final UserRepository userRepository;
 	private final RoutineGenerationJobService routineGenerationJobService;
+	private final SurveyMapper surveyMapper;
 
 	@Cacheable(cacheNames = "surveyDetail")
 	public SurveyDetailResponse getSurvey() {
@@ -60,25 +60,7 @@ public class SurveyService {
 		List<SurveyOption> options = surveyOptionRepository.findAllBySurveyQuestionIdIn(
 			questionIds);
 
-		Map<Long, List<SurveyOptionResponse>> optionsByQuestionId = options.stream()
-			.collect(Collectors.groupingBy(
-				option -> option.getSurveyQuestion().getId(),
-				Collectors.mapping(
-					option -> new SurveyOptionResponse(option.getId(), option.getSortOrder(), option.getContent()),
-					Collectors.toList()
-				)
-			));
-
-		List<SurveyQuestionResponse> questionResponses = questions.stream()
-			.map(question -> new SurveyQuestionResponse(
-				question.getId(),
-				question.getSortOrder(),
-				question.getContent(),
-				optionsByQuestionId.getOrDefault(question.getId(), List.of())
-			))
-			.toList();
-
-		return new SurveyDetailResponse(survey.getId(), questionResponses);
+		return surveyMapper.toSurveyDetailResponse(survey, questions, options);
 	}
 
 	@Transactional
@@ -134,7 +116,7 @@ public class SurveyService {
 			aiSurveyQuestions
 		);
 
-		return SurveySubmissionResponse.from(submission.getId(), job.getJobId(), job.getStatus());
+		return surveyMapper.toSubmissionResponse(submission.getId(), job.getJobId(), job.getStatus());
 	}
 
 	private void validateResponses(
