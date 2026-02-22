@@ -13,9 +13,9 @@ import com.raisedeveloper.server.domain.exercise.dto.ExerciseResultRequest;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionUpdateRequest;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionValidListResponse;
-import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionValidResponse;
 import com.raisedeveloper.server.domain.exercise.infra.ExerciseResultRepository;
 import com.raisedeveloper.server.domain.exercise.infra.ExerciseSessionRepository;
+import com.raisedeveloper.server.domain.exercise.mapper.ExerciseSessionMapper;
 import com.raisedeveloper.server.domain.routine.domain.RoutineStep;
 import com.raisedeveloper.server.global.exception.CustomException;
 import com.raisedeveloper.server.global.exception.ErrorCode;
@@ -32,6 +32,7 @@ public class ExerciseSessionService {
 	private final ExerciseSessionRepository exerciseSessionRepository;
 	private final ExerciseResultRepository exerciseResultRepository;
 	private final com.raisedeveloper.server.domain.routine.infra.RoutineStepRepository routineStepRepository;
+	private final ExerciseSessionMapper exerciseSessionMapper;
 
 	public ExerciseSessionResponse getExerciseSession(Long userId, Long sessionId) {
 		ExerciseSession session = exerciseSessionRepository
@@ -45,26 +46,13 @@ public class ExerciseSessionService {
 
 		log.info("Exercise session retrieved: sessionId={}, userId={}", sessionId, userId);
 
-		return ExerciseSessionResponse.of(session, routineSteps);
+		return exerciseSessionMapper.toSessionResponse(session, routineSteps);
 	}
 
 	public ExerciseSessionValidListResponse getValidExerciseSessions(Long userId) {
-		List<ExerciseSessionValidResponse> sessions = exerciseSessionRepository
-			.findByUserIdAndIsRoutineCompletedIsNullOrderByCreatedAtDesc(userId)
-			.stream()
-			.map(
-				session -> new ExerciseSessionValidResponse(
-					session.getId(),
-					session.getRoutine().getId(),
-					session.getCreatedAt())
-			)
-			.toList();
-
-		if (sessions.isEmpty()) {
-			return new ExerciseSessionValidListResponse(null);
-		}
-
-		return new ExerciseSessionValidListResponse(sessions);
+		List<ExerciseSession> sessions = exerciseSessionRepository
+			.findByUserIdAndIsRoutineCompletedIsNullOrderByCreatedAtDesc(userId);
+		return exerciseSessionMapper.toValidListResponse(sessions);
 	}
 
 	@Transactional

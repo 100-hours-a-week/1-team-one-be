@@ -3,8 +3,6 @@ package com.raisedeveloper.server.domain.post.dto;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import com.raisedeveloper.server.domain.post.domain.Post;
-
 public record PostDetail(
 	Long postId,
 	boolean isAuthor,
@@ -17,26 +15,4 @@ public record PostDetail(
 	LocalDateTime createdAt,
 	boolean isLiked
 ) {
-
-	public static PostDetail from(
-		Post post,
-		boolean isAuthor,
-		PostAuthor author,
-		List<String> images,
-		List<PostTagInfo> tags,
-		boolean isLiked
-	) {
-		return new PostDetail(
-			post.getId(),
-			isAuthor,
-			author,
-			post.getTitle(),
-			post.getContent(),
-			images,
-			tags,
-			post.getLikeCount(),
-			post.getCreatedAt(),
-			isLiked
-		);
-	}
 }

@@ -7,11 +7,4 @@ public record SurveySubmissionResponse(
 	String jobId,
 	RoutineGenerationJobStatus status
 ) {
-	public static SurveySubmissionResponse from(
-		Long submissionId,
-		String jobId,
-		RoutineGenerationJobStatus status
-	) {
-		return new SurveySubmissionResponse(submissionId, jobId, status);
-	}
 }
