@@ -107,7 +107,7 @@ jobs:
             }]
         uses: Ilshidur/action-discord@0.4.0
         with:
-          args: 'CI 파이프라인이 성공적으로 완료되었습니다. <@&${{ secrets.DISCORD_ROLE_BACKEND }}>'
+          args: 'v2 CI 파이프라인이 성공적으로 완료되었습니다. <@&${{ secrets.DISCORD_ROLE_BACKEND }}>'
 
       # Phase 5: Discord 실패 알림
       - name: Discord Notification - Failure
@@ -131,7 +131,7 @@ jobs:
             }]
         uses: Ilshidur/action-discord@0.4.0
         with:
-          args: 'CI 파이프라인 실행 중 오류가 발생했습니다. 로그를 확인해주세요. <@&${{ secrets.DISCORD_ROLE_BACKEND_ONCALL }}> '
+          args: 'v2 CI 파이프라인 실행 중 오류가 발생했습니다. 로그를 확인해주세요. <@&${{ secrets.DISCORD_ROLE_BACKEND_ONCALL }}> '
 
   # 2. 이미지 리태깅 (Merge 시 실행)
   promote-image:

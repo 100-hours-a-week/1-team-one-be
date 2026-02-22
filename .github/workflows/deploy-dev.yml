@@ -243,7 +243,7 @@ jobs:
             }]
         uses: Ilshidur/action-discord@0.4.0
         with:
-          args: '${{ inputs.environment }} 배포 완료! <@&${{ secrets.DISCORD_ROLE_BACKEND }}>'
+          args: 'v2 ${{ inputs.environment }} 배포 완료! <@&${{ secrets.DISCORD_ROLE_BACKEND }}>'
 
       # Discord 실패 알림
       - name: Discord Notification - Failure
@@ -268,4 +268,4 @@ jobs:
             }]
         uses: Ilshidur/action-discord@0.4.0
         with:
-          args: '${{ inputs.environment }} 배포 실패! 로그 확인 필요 <@&${{ secrets.DISCORD_ROLE_BACKEND_ONCALL }}>'
+          args: 'v2 ${{ inputs.environment }} 배포 실패! 로그 확인 필요 <@&${{ secrets.DISCORD_ROLE_BACKEND_ONCALL }}>'
