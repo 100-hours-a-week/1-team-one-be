@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.raisedeveloper.server.domain.exercise.application.ExerciseService;
+import com.raisedeveloper.server.domain.exercise.application.ExerciseSessionFacade;
 import com.raisedeveloper.server.domain.exercise.application.ExerciseSessionService;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseListResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionCompleteResponse;
@@ -25,6 +26,7 @@ public class ExerciseController {
 
 	private final ExerciseService exerciseService;
 	private final ExerciseSessionService exerciseSessionService;
+	private final ExerciseSessionFacade exerciseSessionFacade;
 
 	@GetMapping("/exercises")
 	public ApiResponse<ExerciseListResponse> getAllExercises() {
@@ -53,8 +55,11 @@ public class ExerciseController {
 		@PathVariable Long sessionId,
 		@Valid @RequestBody ExerciseSessionUpdateRequest request
 	) {
-		ExerciseSessionCompleteResponse response = exerciseSessionService.completeExerciseSession(userId, sessionId,
-			request);
+		ExerciseSessionCompleteResponse response = exerciseSessionFacade.completeExerciseSession(
+			userId,
+			sessionId,
+			request
+		);
 		return ApiResponse.of("COMPLETE_EXERCISE_SESSION_SUCCESS", response);
 	}
 }
