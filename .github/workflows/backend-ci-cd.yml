@@ -1,164 +1,169 @@
-name: Backend CI/CD (Docker + ECR)
+name: Backend CI/CD
+
+permissions:
+  contents: write
+  pull-requests: read
 
 on:
   pull_request:
     types: [opened, synchronize, closed]
     branches: [dev, main]
 
-permissions:
-  id-token: write # AWS OIDC 인증
-  contents: read
-
-env:
-  AWS_REGION: ap-northeast-2
-  ECR_REPOSITORY: backend
-
 jobs:
-  # 1. 빌드 및 도커 이미지 푸시 (CI)
-  build-and-push:
+  build-and-test: # PR 대상: Full CI (Lint → Build → Test → Artifact)
+    # closed는 제외 (병합 시에는 CD만 실행)
     if: github.event.action == 'opened' || github.event.action == 'synchronize'
     runs-on: ubuntu-latest
     steps:
+      # 1. 코드 체크아웃
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # 2. JDK 환경 설정 (캐싱 포함)
       - name: Setup JDK 25
         uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '25'
+          cache: 'gradle' # 의존성: ~/.gradle/caches, ~/.gradle/wrapper 캐싱
 
-      # Gradle 빌드 캐시 (선택적, 더 빠른 빌드)
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3 # 빌드 캐싱
-
+      # 3. Gradle 실행 권한 부여
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # Gradle 빌드 (테스트 제외 - 속도 최적화, 필요시 포함)
+      # 4.Gradle 빌드 캐시 (선택적, 더 빠른 빌드)
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3 # 빌드 캐싱
+
+      # Phase 1: Lint (Checkstyle)
+      #- name: Run Checkstyle
+      #  run: ./gradlew checkstyleMain checkstyleTest
+      #  continue-on-error: true  # 초기엔 경고만 (점진적 개선)
+
+      # Phase 2: Build
       - name: Build with Gradle
         run: ./gradlew build -x test
 
-      # 빌드된 JAR 이름을 고정된 이름으로 변경 (Dockerfile COPY 편의성)
-      - name: Rename JAR
-        run: mv build/libs/*.jar backend-app.jar
+      # Phase 3: Test (TODO: 테스트 작성 후 활성화)
+      #- name: Run unit tests
+      #  run: ./gradlew test
 
-      # AWS 자격 증명 설정 (OIDC 방식)
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      # Phase 4: Artifact Upload
+      # plane.jar 생성/저장 안하는 것은 build.gradle에서 설정
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+          name: backend-${{ github.sha }}
+          path: build/libs/*.jar
+          retention-days: 14
+          compression-level: 0  # JAR는 이미 압축됨
 
-      # ECR 로그인
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      # 도커 이미지 빌드 및 푸시
-      - name: Build, tag, and push image to Amazon ECR
-        id: build-image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:pr-$PR_HEAD_SHA .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:pr-$PR_HEAD_SHA
-
-  # 2. 이미지 리태깅 (Merge 시 실행)
-  promote-image:
-    if: github.event.pull_request.merged == true
-    runs-on: ubuntu-latest
-    outputs:
-      # Deploy에서 사용할 최종 이미지 URI 전달
-      final_image_uri: ${{ steps.retag.outputs.FINAL_URI }}
-    steps:
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      # 현재 시간 구하기 (KST)
+      - name: Get Current Time
+        if: always()
+        uses: 1466587594/get-current-time@v2
+        id: current-time
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+          format: 'YYYY-MM-DD HH:mm:ss'
+          utcOffset: "+09:00" # 한국 시간
+          timezone: 'Asia/Seoul'
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Retag Image
-        id: retag
+      # Phase 5: Discord 성공 알림
+      - name: Discord Notification - Success
+        if: success()
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          # 1. 원본 태그 (PR 때 빌드한 것)
-          SOURCE_TAG: pr-${{ github.event.pull_request.head.sha }}
-          # 2. 목표 태그 (실제 배포될 Merge Commit SHA)
-          TARGET_TAG: ${{ github.event.pull_request.merge_commit_sha }}
-          # 3. 브랜치 정보
-          BASE_BRANCH: ${{ github.base_ref }}
-        run: |
-          echo "Finding image with tag: $SOURCE_TAG..."
-          
-          # 매니페스트 가져오기 (이미지 찾기)
-          MANIFEST=$(aws ecr batch-get-image \
-            --repository-name $ECR_REPOSITORY \
-            --image-ids imageTag=$SOURCE_TAG \
-            --query 'images[].imageManifest' \
-            --output text)
-            
-          if [ -z "$MANIFEST" ] || [ "$MANIFEST" == "None" ]; then
-            echo "Error: Source image ($SOURCE_TAG) not found in ECR!"
-            exit 1
-          fi
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_EMBEDS: |
+            [{
+              "title": "✅ BE CI 성공",
+              "color": 5763719,
+              "fields": [
+                {"name": "Repository", "value": "${{ github.repository }}", "inline": false},
+                {"name": "Merge To", "value": "${{ github.base_ref }}", "inline": false},
+                {"name": "Triggered By", "value": "${{ github.actor }}", "inline": false},
+                {"name": "Commit/PR", "value": "${{ github.event.pull_request.title }}", "inline": false},
+                {"name": "Actions Log", "value": "[Link to Action](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})", "inline": true}
+              ],
+              "footer": {
+                "text": "${{ steps.current-time.outputs.formattedTime }} KST"
+              }
+            }]
+        uses: Ilshidur/action-discord@0.4.0
+        with:
+          args: 'CI 파이프라인이 성공적으로 완료되었습니다. <@&${{ secrets.DISCORD_ROLE_BACKEND }}>'
 
-          echo "Image found! Retagging to: $TARGET_TAG"
+      # Phase 5: Discord 실패 알림
+      - name: Discord Notification - Failure
+        if: failure()
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_EMBEDS: |
+            [{
+              "title": "🚨 BE CI 실패",
+              "color": 15548997,
+              "fields": [
+                {"name": "Repository", "value": "${{ github.repository }}", "inline": false},
+                {"name": "Merge To", "value": "${{ github.base_ref }}", "inline": false},
+                {"name": "Triggered By", "value": "${{ github.actor }}", "inline": false},
+                {"name": "Commit/PR", "value": "${{ github.event.pull_request.title }}", "inline": false},
+                {"name": "Actions Log", "value": "[Link to Action](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})", "inline": true}
+              ],
+              "footer": {
+                "text": "${{ steps.current-time.outputs.formattedTime }} KST"
+              }
+            }]
+        uses: Ilshidur/action-discord@0.4.0
+        with:
+          args: 'CI 파이프라인 실행 중 오류가 발생했습니다. 로그를 확인해주세요. <@&${{ secrets.DISCORD_ROLE_BACKEND_ONCALL }}> '
 
-          # 1. Merge SHA 태그 붙이기
-          aws ecr put-image \
-            --repository-name $ECR_REPOSITORY \
-            --image-tag $TARGET_TAG \
-            --image-manifest "$MANIFEST"
-            
-          # 2. 환경별 Latest 태그 붙이기
-          if [[ "$BASE_BRANCH" == "dev" ]]; then
-            aws ecr put-image --repository-name $ECR_REPOSITORY --image-tag dev-latest --image-manifest "$MANIFEST" || true
-          elif [[ "$BASE_BRANCH" == "main" ]]; then
-            aws ecr put-image --repository-name $ECR_REPOSITORY --image-tag staging-latest --image-manifest "$MANIFEST" || true
-            aws ecr put-image --repository-name $ECR_REPOSITORY --image-tag prod-latest --image-manifest "$MANIFEST" || true
-          fi
-          
-          # 최종적으로 배포에 사용할 URI 출력
-          echo "FINAL_URI=$ECR_REGISTRY/$ECR_REPOSITORY:$TARGET_TAG" >> $GITHUB_OUTPUT
-
-  # 2. Dev 배포 (dev 브랜치 Merge 시)  
+  # Dev 환경 배포 (dev 브랜치 merge 시)
   deploy-dev:
-    needs: promote-image
     if: github.event.pull_request.merged == true && github.base_ref == 'dev'
-    uses: ./.github/workflows/deploy-dev-ssm.yml
+    uses: ./.github/workflows/deploy-template.yml
     with:
       environment: dev
-      image_uri: ${{ needs.promote-image.outputs.final_image_uri }}
-      instance_tag_name: "Environment" # EC2 태그 Key
-      instance_tag_value: "dev" # EC2 태그 Value
+      # server_host: ${{ secrets.DEV_SERVER_HOST }}
+      pr_number: ${{ github.event.pull_request.number }}
+      commit_sha: ${{ github.sha }}
+      base_ref: ${{ github.base_ref }}
+      pr_title: ${{ github.event.pull_request.title }}
+      actor: ${{ github.actor }}
+      repository: ${{ github.repository }}
+      run_id: ${{ github.run_id }}
+      create_tag: false
     secrets: inherit
 
-  # 3. Staging 배포 (main 브랜치 Merge 시)
+  # Staging 환경 배포 (main 브랜치 merge 시, 자동)
   deploy-staging:
-    needs: promote-image
     if: github.event.pull_request.merged == true && github.base_ref == 'main'
-    uses: ./.github/workflows/deploy-asg-rolling.yml
+    uses: ./.github/workflows/deploy-template.yml
     with:
       environment: staging
-      image_uri: ${{ needs.promote-image.outputs.final_image_uri }}
-      asg_name: "backend-staging-asg"
-      lt_id: "lt-0xxxxxxxxxxxxxx" # Staging용 시작 템플릿 ID
+      # server_host: ${{ secrets.STAGING_SERVER_HOST }}
+      pr_number: ${{ github.event.pull_request.number }}
+      commit_sha: ${{ github.sha }}
+      base_ref: ${{ github.base_ref }}
+      pr_title: ${{ github.event.pull_request.title }}
+      actor: ${{ github.actor }}
+      repository: ${{ github.repository }}
+      run_id: ${{ github.run_id }}
+      create_tag: false
     secrets: inherit
-  
-  # 4. Production 배포 (Staging 성공 후 승인 필요)
+
+  # Production 환경 배포 (Staging 성공 후 수동 승인 필요)
   deploy-production:
-    needs: [promote-image, deploy-staging]
     if: github.event.pull_request.merged == true && github.base_ref == 'main'
-    uses: ./.github/workflows/deploy-asg-rolling.yml
+    needs: [deploy-staging]
+    uses: ./.github/workflows/deploy-template.yml
     with:
-      environment: production
-      image_uri: ${{needs.promote-image.outputs.final_image_uri}}
-      asg_name: "backend-prod-asg"
-      lt_id: "lt-yyyyyyyy"
+      environment: production  # GitHub Environment에서 Required reviewers 설정 필수
+      # server_host: ${{ secrets.PROD_SERVER_HOST }}
+      pr_number: ${{ github.event.pull_request.number }}
+      commit_sha: ${{ github.sha }}
+      base_ref: ${{ github.base_ref }}
+      pr_title: ${{ github.event.pull_request.title }}
+      actor: ${{ github.actor }}
+      repository: ${{ github.repository }}
+      run_id: ${{ github.run_id }}
+      create_tag: true  # Production만 시맨틱 버전 태그 생성
     secrets: inherit
