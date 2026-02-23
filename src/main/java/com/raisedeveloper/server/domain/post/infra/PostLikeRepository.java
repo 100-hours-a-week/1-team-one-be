@@ -12,7 +12,7 @@ public interface PostLikeRepository extends JpaRepository<PostLike, Long> {
 
 	boolean existsByPostIdAndUserId(Long postId, Long userId);
 
-	void deleteByPostIdAndUserId(Long postId, Long userId);
+	long deleteByPostIdAndUserId(Long postId, Long userId);
 
 	@Query("select pl.post.id from PostLike pl where pl.user.id = :userId and pl.post.id in :postIds")
 	List<Long> findPostIdsByUserIdAndPostIdIn(@Param("userId") Long userId, @Param("postIds") List<Long> postIds);

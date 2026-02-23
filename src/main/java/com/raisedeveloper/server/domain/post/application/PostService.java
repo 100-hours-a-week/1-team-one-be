@@ -11,6 +11,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -200,22 +201,43 @@ public class PostService {
 	}
 
 	@Transactional
-	public PostLikeResponse togglePostLike(Long userId, Long postId, boolean liked) {
+	public PostLikeResponse togglePostLike(Long userId, Long postId, boolean likeRequested) {
 		Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
 			.orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 		User user = userRepository.findByIdAndDeletedAtIsNull(userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-		boolean alreadyLiked = postLikeRepository.existsByPostIdAndUserId(postId, userId);
-		if (liked && !alreadyLiked) {
-			postLikeRepository.save(new PostLike(post, user));
-			postLikeOutboxRepository.save(new PostLikeOutbox(postId, 1));
-		} else if (!liked && alreadyLiked) {
-			postLikeRepository.deleteByPostIdAndUserId(postId, userId);
-			postLikeOutboxRepository.save(new PostLikeOutbox(postId, -1));
+		if (likeRequested) {
+			try {
+				postLikeRepository.save(new PostLike(post, user));
+				postLikeOutboxRepository.save(new PostLikeOutbox(postId, 1));
+			} catch (DataIntegrityViolationException ex) {
+				if (!isDuplicatePostLike(ex)) {
+					throw ex;
+				}
+			}
+		} else {
+			long deleted = postLikeRepository.deleteByPostIdAndUserId(postId, userId);
+			if (deleted > 0) {
+				postLikeOutboxRepository.save(new PostLikeOutbox(postId, -1));
+			}
 		}
 
-		return new PostLikeResponse(postId, liked);
+		return new PostLikeResponse(postId, likeRequested);
+	}
+
+	private boolean isDuplicatePostLike(DataIntegrityViolationException ex) {
+		Throwable cause = ex;
+		while (cause != null) {
+			String message = cause.getMessage();
+			if (message != null
+				&& message.contains("post_likes.uk_post_likes_post_user")
+				&& message.contains("Duplicate entry")) {
+				return true;
+			}
+			cause = cause.getCause();
+		}
+		return false;
 	}
 
 	private List<String> normalizeList(List<String> values) {
