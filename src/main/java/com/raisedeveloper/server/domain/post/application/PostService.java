@@ -17,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.raisedeveloper.server.domain.post.domain.Post;
 import com.raisedeveloper.server.domain.post.domain.PostImage;
-import com.raisedeveloper.server.domain.post.domain.PostLike;
 import com.raisedeveloper.server.domain.post.domain.PostLikeOutbox;
 import com.raisedeveloper.server.domain.post.domain.PostTag;
 import com.raisedeveloper.server.domain.post.domain.Tag;
@@ -200,22 +199,25 @@ public class PostService {
 	}
 
 	@Transactional
-	public PostLikeResponse togglePostLike(Long userId, Long postId, boolean liked) {
-		Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
+	public PostLikeResponse togglePostLike(Long userId, Long postId, boolean likeRequested) {
+		postRepository.findByIdAndDeletedAtIsNull(postId)
 			.orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
-		User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+		userRepository.findByIdAndDeletedAtIsNull(userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-		boolean alreadyLiked = postLikeRepository.existsByPostIdAndUserId(postId, userId);
-		if (liked && !alreadyLiked) {
-			postLikeRepository.save(new PostLike(post, user));
-			postLikeOutboxRepository.save(new PostLikeOutbox(postId, 1));
-		} else if (!liked && alreadyLiked) {
-			postLikeRepository.deleteByPostIdAndUserId(postId, userId);
-			postLikeOutboxRepository.save(new PostLikeOutbox(postId, -1));
+		if (likeRequested) {
+			int inserted = postLikeRepository.insertIgnoreByPostIdAndUserId(postId, userId);
+			if (inserted > 0) {
+				postLikeOutboxRepository.save(new PostLikeOutbox(postId, 1));
+			}
+		} else {
+			long deleted = postLikeRepository.deleteByPostIdAndUserId(postId, userId);
+			if (deleted > 0) {
+				postLikeOutboxRepository.save(new PostLikeOutbox(postId, -1));
+			}
 		}
 
-		return new PostLikeResponse(postId, liked);
+		return new PostLikeResponse(postId, likeRequested);
 	}
 
 	private List<String> normalizeList(List<String> values) {
