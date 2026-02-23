@@ -1,6 +1,6 @@
 package com.raisedeveloper.server.global.validation;
 
-import static com.raisedeveloper.server.domain.common.ValidationConstants.*;
+import static com.raisedeveloper.server.global.exception.ErrorMessageConstants.*;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -17,7 +17,7 @@ import jakarta.validation.Payload;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Password {
 
-	String message() default PASSWORD_FORMAT_INVALID;
+	String message() default AUTH_PASSWORD_FORMAT_INVALID_MESSAGE;
 
 	Class<?>[] groups() default {};
 

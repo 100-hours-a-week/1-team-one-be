@@ -1,9 +1,6 @@
 package com.raisedeveloper.server.domain.auth.dto;
 
-import static com.raisedeveloper.server.domain.common.ValidationConstants.*;
-import static com.raisedeveloper.server.domain.common.ValidationConstants.EMAIL_REQUIRED;
-import static com.raisedeveloper.server.domain.common.ValidationConstants.PASSWORD_LENGTH_INVALID;
-import static com.raisedeveloper.server.domain.common.ValidationConstants.PASSWORD_REQUIRED;
+import static com.raisedeveloper.server.global.exception.ErrorMessageConstants.*;
 
 import com.raisedeveloper.server.global.validation.Password;
 
@@ -12,14 +9,14 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 public record AuthLoginRequest(
-	@Email(message = EMAIL_FORMAT_INVALID)
-	@NotBlank(message = EMAIL_REQUIRED)
-	@Size(max = 255)
+	@Email(message = AUTH_EMAIL_FORMAT_INVALID_MESSAGE)
+	@NotBlank(message = AUTH_EMAIL_REQUIRED_MESSAGE)
+	@Size(max = 255, message = AUTH_EMAIL_TOO_LONG_MESSAGE)
 	String email,
 
-	@NotBlank(message = PASSWORD_REQUIRED)
+	@NotBlank(message = AUTH_PASSWORD_REQUIRED_MESSAGE)
 	@Password
-	@Size(min = 8, max = 16, message = PASSWORD_LENGTH_INVALID)
+	@Size(min = 8, max = 16, message = AUTH_PASSWORD_LENGTH_INVALID_MESSAGE)
 	String password
 ) {
 }

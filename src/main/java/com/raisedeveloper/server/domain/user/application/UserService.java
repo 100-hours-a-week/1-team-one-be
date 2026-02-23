@@ -6,11 +6,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.raisedeveloper.server.domain.auth.application.AuthService;
+import com.raisedeveloper.server.domain.exercise.application.AlarmScheduleService;
 import com.raisedeveloper.server.domain.user.domain.User;
 import com.raisedeveloper.server.domain.user.domain.UserAlarmSettings;
 import com.raisedeveloper.server.domain.user.domain.UserCharacter;
 import com.raisedeveloper.server.domain.user.domain.UserProfile;
 import com.raisedeveloper.server.domain.user.dto.AlarmSettingsDndRequest;
+import com.raisedeveloper.server.domain.user.dto.AlarmSettingsDndResponse;
 import com.raisedeveloper.server.domain.user.dto.AlarmSettingsRequest;
 import com.raisedeveloper.server.domain.user.dto.CharacterCreateRequest;
 import com.raisedeveloper.server.domain.user.dto.CharacterCreateResponse;
@@ -22,6 +24,7 @@ import com.raisedeveloper.server.domain.user.infra.UserAlarmSettingsRepository;
 import com.raisedeveloper.server.domain.user.infra.UserCharacterRepository;
 import com.raisedeveloper.server.domain.user.infra.UserProfileRepository;
 import com.raisedeveloper.server.domain.user.infra.UserRepository;
+import com.raisedeveloper.server.domain.user.mapper.UserMapper;
 import com.raisedeveloper.server.global.exception.CustomException;
 import com.raisedeveloper.server.global.exception.ErrorCode;
 import com.raisedeveloper.server.global.exception.ErrorDetail;
@@ -36,8 +39,10 @@ public class UserService {
 	private final AuthService authService;
 	private final UserRepository userRepository;
 	private final UserAlarmSettingsRepository userAlarmSettingsRepository;
+	private final AlarmScheduleService alarmScheduleService;
 	private final UserCharacterRepository userCharacterRepository;
 	private final UserProfileRepository userProfileRepository;
+	private final UserMapper userMapper;
 
 	@Transactional
 	public UserMeResponse getMe(Long userId) {
@@ -50,7 +55,7 @@ public class UserService {
 		UserCharacter character = userCharacterRepository.findByUserId(userId).orElseThrow(
 			() -> new CustomException(ErrorCode.CHARACTER_NOT_SET)
 		);
-		return UserMeResponse.from(user, profile, character);
+		return userMapper.toMeResponse(user, profile, character);
 	}
 
 	@Transactional
@@ -64,7 +69,7 @@ public class UserService {
 		UserCharacter character = userCharacterRepository.findByUserId(userId).orElseThrow(
 			() -> new CustomException(ErrorCode.CHARACTER_NOT_SET)
 		);
-		return UserMeResponse.from(user, profile, character);
+		return userMapper.toMeResponse(user, profile, character);
 	}
 
 	@Transactional
@@ -76,7 +81,7 @@ public class UserService {
 			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
 		);
 		profile.updateImagePath(imagePath);
-		return UserProfileResponse.from(profile);
+		return userMapper.toProfileResponse(profile);
 	}
 
 	@Transactional
@@ -94,7 +99,7 @@ public class UserService {
 			);
 		}
 		profile.updateNickname(nickname);
-		return UserProfileResponse.from(profile);
+		return userMapper.toProfileResponse(profile);
 	}
 
 	@Transactional
@@ -108,7 +113,7 @@ public class UserService {
 
 	@Transactional
 	public UserMeAlarmSettingsResponse getAlarmSettings(Long userId) {
-		User user = userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
+		userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
 			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
 		);
 
@@ -116,7 +121,20 @@ public class UserService {
 			.orElseThrow(
 				() -> new CustomException(ErrorCode.ALARM_SETTING_NOT_FOUND));
 
-		return UserMeAlarmSettingsResponse.from(settings);
+		return userMapper.toAlarmSettingsResponse(settings);
+	}
+
+	@Transactional
+	public AlarmSettingsDndResponse getAlarmDnd(Long userId) {
+		userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
+			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
+		);
+
+		UserAlarmSettings settings = userAlarmSettingsRepository.findByUserId(userId)
+			.orElseThrow(
+				() -> new CustomException(ErrorCode.ALARM_SETTING_NOT_FOUND));
+
+		return userMapper.toAlarmSettingsDndResponse(settings);
 	}
 
 	@Transactional
@@ -146,6 +164,7 @@ public class UserService {
 					repeatDays
 				))
 			);
+		alarmScheduleService.refreshForUserId(userId, LocalDateTime.now());
 	}
 
 	@Transactional
@@ -160,6 +179,7 @@ public class UserService {
 			);
 
 		alarmSettings.enableDnd(request.dndFinishedAt());
+		alarmScheduleService.refreshForUserId(userId, LocalDateTime.now());
 	}
 
 	@Transactional

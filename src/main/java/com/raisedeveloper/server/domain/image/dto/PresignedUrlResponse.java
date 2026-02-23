@@ -7,7 +7,4 @@ public record PresignedUrlResponse(
 	String filePath,
 	LocalDateTime expiresAt
 ) {
-	public static PresignedUrlResponse of(String uploadUrl, String filePath, LocalDateTime expiresAt) {
-		return new PresignedUrlResponse(uploadUrl, filePath, expiresAt);
-	}
 }

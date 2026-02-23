@@ -6,21 +6,19 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.raisedeveloper.server.domain.routine.application.RoutineService;
-import com.raisedeveloper.server.domain.routine.client.AiRoutineClient;
-import com.raisedeveloper.server.domain.routine.client.dto.AiRoutineResponse;
+import com.raisedeveloper.server.domain.routine.application.RoutineGenerationJobService;
 import com.raisedeveloper.server.domain.routine.client.dto.AiSurveyQuestion;
+import com.raisedeveloper.server.domain.routine.domain.RoutineGenerationJob;
 import com.raisedeveloper.server.domain.survey.domain.Survey;
 import com.raisedeveloper.server.domain.survey.domain.SurveyOption;
 import com.raisedeveloper.server.domain.survey.domain.SurveyQuestion;
 import com.raisedeveloper.server.domain.survey.domain.SurveyResponse;
 import com.raisedeveloper.server.domain.survey.domain.SurveySubmission;
 import com.raisedeveloper.server.domain.survey.dto.SurveyDetailResponse;
-import com.raisedeveloper.server.domain.survey.dto.SurveyOptionResponse;
-import com.raisedeveloper.server.domain.survey.dto.SurveyQuestionResponse;
 import com.raisedeveloper.server.domain.survey.dto.SurveySubmissionAnswerRequest;
 import com.raisedeveloper.server.domain.survey.dto.SurveySubmissionRequest;
 import com.raisedeveloper.server.domain.survey.dto.SurveySubmissionResponse;
@@ -29,6 +27,7 @@ import com.raisedeveloper.server.domain.survey.infra.SurveyQuestionRepository;
 import com.raisedeveloper.server.domain.survey.infra.SurveyRepository;
 import com.raisedeveloper.server.domain.survey.infra.SurveyResponseRepository;
 import com.raisedeveloper.server.domain.survey.infra.SurveySubmissionRepository;
+import com.raisedeveloper.server.domain.survey.mapper.SurveyMapper;
 import com.raisedeveloper.server.domain.user.domain.User;
 import com.raisedeveloper.server.domain.user.infra.UserRepository;
 import com.raisedeveloper.server.global.exception.CustomException;
@@ -48,9 +47,10 @@ public class SurveyService {
 	private final SurveySubmissionRepository surveySubmissionRepository;
 	private final SurveyResponseRepository surveyResponseRepository;
 	private final UserRepository userRepository;
-	private final AiRoutineClient aiRoutineClient;
-	private final RoutineService routineService;
+	private final RoutineGenerationJobService routineGenerationJobService;
+	private final SurveyMapper surveyMapper;
 
+	@Cacheable(cacheNames = "surveyDetail")
 	public SurveyDetailResponse getSurvey() {
 		Survey survey = surveyRepository.findFirstByIsActiveTrueOrderByVersionDesc()
 			.orElseThrow(() -> new CustomException(ErrorCode.SURVEY_NOT_FOUND));
@@ -60,25 +60,7 @@ public class SurveyService {
 		List<SurveyOption> options = surveyOptionRepository.findAllBySurveyQuestionIdIn(
 			questionIds);
 
-		Map<Long, List<SurveyOptionResponse>> optionsByQuestionId = options.stream()
-			.collect(Collectors.groupingBy(
-				option -> option.getSurveyQuestion().getId(),
-				Collectors.mapping(
-					option -> new SurveyOptionResponse(option.getId(), option.getSortOrder(), option.getContent()),
-					Collectors.toList()
-				)
-			));
-
-		List<SurveyQuestionResponse> questionResponses = questions.stream()
-			.map(question -> new SurveyQuestionResponse(
-				question.getId(),
-				question.getSortOrder(),
-				question.getContent(),
-				optionsByQuestionId.getOrDefault(question.getId(), List.of())
-			))
-			.toList();
-
-		return new SurveyDetailResponse(survey.getId(), questionResponses);
+		return surveyMapper.toSurveyDetailResponse(survey, questions, options);
 	}
 
 	@Transactional
@@ -117,33 +99,24 @@ public class SurveyService {
 			.toList();
 		surveyResponseRepository.saveAll(responses);
 
-		try {
-			List<AiSurveyQuestion> aiSurveyQuestions = request.responses().stream()
-				.map(answer -> {
-					SurveyQuestion question = questionMap.get(answer.questionId());
-					SurveyOption option = optionMap.get(answer.optionId());
-					return new AiSurveyQuestion(
-						question.getContent(),
-						option.getSortOrder()
-					);
-				})
-				.toList();
+		List<AiSurveyQuestion> aiSurveyQuestions = request.responses().stream()
+			.map(answer -> {
+				SurveyQuestion question = questionMap.get(answer.questionId());
+				SurveyOption option = optionMap.get(answer.optionId());
+				return new AiSurveyQuestion(
+					question.getContent(),
+					option.getSortOrder()
+				);
+			})
+			.toList();
 
-			AiRoutineResponse aiResponse = aiRoutineClient.generateRoutines(
-				user.getId(),
-				submission.getId(),
-				aiSurveyQuestions
-			);
+		RoutineGenerationJob job = routineGenerationJobService.createJobAndRequest(
+			user,
+			submission,
+			aiSurveyQuestions
+		);
 
-			routineService.createRoutinesFromAiResponse(user, submission, aiResponse);
-
-		} catch (CustomException e) {
-			throw e;
-		} catch (Exception e) {
-			throw new CustomException(ErrorCode.AI_ROUTINE_GENERATION_FAILED);
-		}
-
-		return SurveySubmissionResponse.from(submission.getId());
+		return surveyMapper.toSubmissionResponse(submission.getId(), job.getJobId(), job.getStatus());
 	}
 
 	private void validateResponses(

@@ -9,7 +9,7 @@ import com.raisedeveloper.server.domain.stats.application.StatsService;
 import com.raisedeveloper.server.domain.stats.dto.GrassStatsResponse;
 import com.raisedeveloper.server.domain.stats.enums.ViewType;
 import com.raisedeveloper.server.global.response.ApiResponse;
-import com.raisedeveloper.server.global.security.utils.AuthUtils;
+import com.raisedeveloper.server.global.security.currentuser.CurrentUser;
 
 import lombok.RequiredArgsConstructor;
 
@@ -22,11 +22,11 @@ public class StatsController {
 
 	@GetMapping("/grass")
 	public ApiResponse<GrassStatsResponse> getGrassStats(
+		@CurrentUser Long userId,
 		@RequestParam("view") ViewType viewType,
 		@RequestParam(value = "month", required = false) String month
 	) {
-		Long userId = AuthUtils.resolveUserIdFromContext();
 		GrassStatsResponse response = statsService.getGrassStats(userId, viewType, month);
-		return ApiResponse.success("GET_STATS_GRASS_SUCCESS", response);
+		return ApiResponse.of("GET_STATS_GRASS_SUCCESS", response);
 	}
 }

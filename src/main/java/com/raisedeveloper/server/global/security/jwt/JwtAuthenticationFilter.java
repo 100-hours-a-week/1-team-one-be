@@ -4,8 +4,11 @@ import java.io.IOException;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
+
+import com.raisedeveloper.server.global.exception.CustomException;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -15,9 +18,11 @@ import jakarta.servlet.http.HttpServletResponse;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 	private final JwtTokenProvider jwtTokenProvider;
+	private final RequestMatcher optionalAuthMatcher;
 
-	public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
+	public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, RequestMatcher optionalAuthMatcher) {
 		this.jwtTokenProvider = jwtTokenProvider;
+		this.optionalAuthMatcher = optionalAuthMatcher;
 	}
 
 	@Override
@@ -34,10 +39,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 			return;
 		}
 
-		jwtTokenProvider.validate(token);
+		try {
+			jwtTokenProvider.validateAccessToken(token);
 
-		var authentication = jwtTokenProvider.getAuthentication(token);
-		SecurityContextHolder.getContext().setAuthentication(authentication);
+			var authentication = jwtTokenProvider.getAuthentication(token);
+			SecurityContextHolder.getContext().setAuthentication(authentication);
+		} catch (CustomException ex) {
+			if (ex.getErrorCode() != null && ex.getErrorCode().isJwtError() && optionalAuthMatcher.matches(request)) {
+				SecurityContextHolder.clearContext();
+				filterChain.doFilter(request, response);
+				return;
+			}
+			throw ex;
+		}
 
 		filterChain.doFilter(request, response);
 	}

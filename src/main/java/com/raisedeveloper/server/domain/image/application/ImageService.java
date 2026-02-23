@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import com.raisedeveloper.server.domain.image.dto.PresignedUrlRequest;
 import com.raisedeveloper.server.domain.image.dto.PresignedUrlResponse;
 import com.raisedeveloper.server.domain.image.enums.ImageType;
+import com.raisedeveloper.server.domain.image.mapper.ImageMapper;
 import com.raisedeveloper.server.global.exception.CustomException;
 import com.raisedeveloper.server.global.exception.ErrorCode;
 import com.raisedeveloper.server.global.exception.ErrorDetail;
@@ -24,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 public class ImageService {
 
 	private final StorageService storageService;
+	private final ImageMapper imageMapper;
 
 	@Value("#{'${image.allowed-extensions.profile}'.split(',')}")
 	private List<String> profileImageExtensions;
@@ -55,7 +57,7 @@ public class ImageService {
 		log.info("Generated presigned URL for imageType: {}, filePath: {}",
 			imageType, filePath);
 
-		return PresignedUrlResponse.of(presignedUrl, filePath, expiresAt);
+		return imageMapper.toPresignedUrlResponse(presignedUrl, filePath, expiresAt);
 	}
 
 	public void deleteImage(String filePath) {

@@ -1,23 +1,23 @@
-package com.raisedeveloper.server.domain.notification.application;
+package com.raisedeveloper.server.global.pagination;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+
 import org.springframework.stereotype.Component;
 
 import com.raisedeveloper.server.global.exception.CustomException;
 import com.raisedeveloper.server.global.exception.ErrorCode;
 import com.raisedeveloper.server.global.exception.ErrorDetail;
-import com.raisedeveloper.server.global.pagination.CursorTokenCodec;
 
 @Component
-public class NotificationCursor {
+public class CursorService {
 
 	private static final ZoneId ZONE_ID = ZoneId.of("Asia/Seoul");
 
 	private final CursorTokenCodec cursorTokenCodec;
 
-	public NotificationCursor(CursorTokenCodec cursorTokenCodec) {
+	public CursorService(CursorTokenCodec cursorTokenCodec) {
 		this.cursorTokenCodec = cursorTokenCodec;
 	}
 
@@ -53,9 +53,4 @@ public class NotificationCursor {
 		);
 	}
 
-	public record Cursor(
-		LocalDateTime createdAt,
-		Long id
-	) {
-	}
 }

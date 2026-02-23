@@ -29,7 +29,7 @@ public class ImageController {
 			ImageType.USER_PROFILE,
 			request
 		);
-		return ApiResponse.success("PRESIGNED_URL_GENERATED", response);
+		return ApiResponse.of("PRESIGNED_URL_GENERATED", response);
 	}
 
 	@PostMapping("/upload-url/post")
@@ -40,6 +40,6 @@ public class ImageController {
 			ImageType.POST_IMAGE,
 			request
 		);
-		return ApiResponse.success("PRESIGNED_URL_GENERATED", response);
+		return ApiResponse.of("PRESIGNED_URL_GENERATED", response);
 	}
 }

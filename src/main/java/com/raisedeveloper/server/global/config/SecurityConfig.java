@@ -1,7 +1,10 @@
 package com.raisedeveloper.server.global.config;
 
+import java.util.List;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -11,7 +14,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RegexRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -39,7 +45,21 @@ public class SecurityConfig {
 		ObjectMapper objectMapper
 	) throws Exception {
 
-		JwtAuthenticationFilter jwtAuthFilter = new JwtAuthenticationFilter(jwtTokenProvider);
+		PathPatternRequestMatcher.Builder path = PathPatternRequestMatcher.withDefaults();
+		var optionalAuthMatchers = List.of(
+			new RegexRequestMatcher("^/users/\\d+$", "GET"),
+			new RegexRequestMatcher("^/posts/\\d+$", "GET"),
+			path.matcher(HttpMethod.GET, "/posts"),
+			path.matcher("/auth/**"),
+			path.matcher("/health"),
+			path.matcher("/actuator/**"),
+			path.matcher("/exercises"),
+			path.matcher("/images/upload-url/profile"),
+			path.matcher("/routines/callback")
+		);
+		RequestMatcher optionalAuthMatcher = new OrRequestMatcher(optionalAuthMatchers);
+
+		JwtAuthenticationFilter jwtAuthFilter = new JwtAuthenticationFilter(jwtTokenProvider, optionalAuthMatcher);
 		JwtExceptionFilter jwtExceptionFilter = new JwtExceptionFilter(objectMapper);
 
 		http
@@ -51,18 +71,12 @@ public class SecurityConfig {
 				.accessDeniedHandler(new JwtAccessDeniedHandler(objectMapper))
 			)
 
-			.authorizeHttpRequests(auth -> auth
-				.requestMatchers(new RegexRequestMatcher("^/users/\\d+$", "GET")).permitAll()
-				.requestMatchers(
-					"/auth/**",
-					"/health",
-					"/actuator/**",
-					"/exercises",
-					"/images/upload-url/profile"
-				).permitAll()
+			.authorizeHttpRequests(auth -> {
+				optionalAuthMatchers.forEach(matcher -> auth.requestMatchers(matcher).permitAll());
+				auth
 				.requestMatchers("/admin/**").hasRole("ADMIN")
-				.anyRequest().authenticated()
-			)
+					.anyRequest().authenticated();
+			})
 
 			.formLogin(AbstractHttpConfigurer::disable)
 			.httpBasic(AbstractHttpConfigurer::disable)

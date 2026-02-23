@@ -19,6 +19,7 @@ import org.springframework.stereotype.Component;
 import com.raisedeveloper.server.domain.common.enums.Role;
 import com.raisedeveloper.server.global.exception.CustomException;
 import com.raisedeveloper.server.global.exception.ErrorCode;
+import com.raisedeveloper.server.global.security.currentuser.CurrentUserPrincipal;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -81,46 +82,53 @@ public class JwtTokenProvider {
 	}
 
 
-	public boolean validate(String token) {
-		parseJws(token);
+	public boolean validateAccessToken(String token) {
+		Jws<Claims> jws = parseJws(token, TokenType.ACCESS);
+		validateTokenType(jws.getPayload(), TokenType.ACCESS, ErrorCode.ACCESS_TOKEN_INVALID);
 		return true;
 	}
 
-	public JwtClaims extractClaims(String token) {
-		Claims claims = parseJws(token).getPayload();
+	public JwtClaims extractClaims(String token, TokenType expectedTokenType) {
+		ErrorCode invalidCode = expectedTokenType == TokenType.REFRESH
+			? ErrorCode.REFRESH_TOKEN_INVALID
+			: ErrorCode.ACCESS_TOKEN_INVALID;
+
+		Claims claims = parseJws(token, expectedTokenType).getPayload();
+		validateTokenType(claims, expectedTokenType, invalidCode);
 
 		Long uid = asLong(claims.get(JwtClaims.CLAIM_USER_ID));
 		String email = claims.get(JwtClaims.CLAIM_EMAIL, String.class);
 
-		Role role = parseEnum(Role.class, claims.get(JwtClaims.CLAIM_ROLE));
-		TokenType tokenType = parseEnum(TokenType.class, claims.get(JwtClaims.CLAIM_TOKEN_TYPE));
+		Role role = parseEnum(Role.class, claims.get(JwtClaims.CLAIM_ROLE), invalidCode);
+		TokenType tokenType = parseEnum(TokenType.class, claims.get(JwtClaims.CLAIM_TOKEN_TYPE), invalidCode);
 
 		return new JwtClaims(uid, email, role, tokenType);
 	}
 
 	public Authentication getAuthentication(String token) {
-		JwtClaims claims = extractClaims(token);
+		JwtClaims claims = extractClaims(token, TokenType.ACCESS);
 
 		var authority = new SimpleGrantedAuthority(claims.role().toAuthority());
 
-		var auth = new UsernamePasswordAuthenticationToken(claims.email(), null, java.util.List.of(authority));
-		auth.setDetails(Map.of("userId", claims.userId(), "tokenType", claims.tokenType()));
-		return auth;
+		var principal = new CurrentUserPrincipal(claims.userId(), claims.email(), claims.role(), claims.tokenType());
+		return new UsernamePasswordAuthenticationToken(principal, null, java.util.List.of(authority));
 	}
 
-	private Jws<Claims> parseJws(String token) {
+	private Jws<Claims> parseJws(String token, TokenType expectedTokenType) {
+		ErrorCode expiredCode = expectedTokenType == TokenType.REFRESH
+			? ErrorCode.REFRESH_TOKEN_EXPIRED
+			: ErrorCode.ACCESS_TOKEN_EXPIRED;
+		ErrorCode invalidCode = expectedTokenType == TokenType.REFRESH
+			? ErrorCode.REFRESH_TOKEN_INVALID
+			: ErrorCode.ACCESS_TOKEN_INVALID;
+
 		try {
 			return Jwts.parser().verifyWith(secretKey).requireIssuer(issuer).build().parseSignedClaims(token);
 		} catch (ExpiredJwtException e) {
-			throw new CustomException(ErrorCode.EXPIRED_TOKEN);
-		} catch (UnsupportedJwtException e) {
-			throw new CustomException(ErrorCode.UNSUPPORTED_TOKEN);
-		} catch (MalformedJwtException e) {
-			throw new CustomException(ErrorCode.MALFORMED_TOKEN);
-		} catch (SecurityException | SignatureException e) {
-			throw new CustomException(ErrorCode.INVALID_SIGNATURE);
-		} catch (IllegalArgumentException e) {
-			throw new CustomException(ErrorCode.INVALID_TOKEN);
+			throw new CustomException(expiredCode);
+		} catch (UnsupportedJwtException | MalformedJwtException | SecurityException
+				 | SignatureException | IllegalArgumentException e) {
+			throw new CustomException(invalidCode);
 		}
 	}
 
@@ -134,9 +142,7 @@ public class JwtTokenProvider {
 		};
 	}
 
-	private static <E extends Enum<E>> E parseEnum(Class<E> enumType, Object raw) {
-		ErrorCode errorCode = ErrorCode.INVALID_TOKEN;
-
+	private static <E extends Enum<E>> E parseEnum(Class<E> enumType, Object raw, ErrorCode errorCode) {
 		if (raw == null) {
 			throw new CustomException(errorCode);
 		}
@@ -148,6 +154,14 @@ public class JwtTokenProvider {
 			return Enum.valueOf(enumType, string);
 		} catch (IllegalArgumentException e) {
 			throw new CustomException(errorCode);
+		}
+	}
+
+	private static void validateTokenType(Claims claims, TokenType expected, ErrorCode invalidCode) {
+		Object raw = claims.get(JwtClaims.CLAIM_TOKEN_TYPE);
+		TokenType tokenType = parseEnum(TokenType.class, raw, invalidCode);
+		if (tokenType != expected) {
+			throw new CustomException(invalidCode);
 		}
 	}
 }

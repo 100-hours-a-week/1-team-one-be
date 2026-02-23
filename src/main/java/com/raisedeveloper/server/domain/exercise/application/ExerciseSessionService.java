@@ -9,18 +9,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.raisedeveloper.server.domain.exercise.domain.ExerciseResult;
 import com.raisedeveloper.server.domain.exercise.domain.ExerciseSession;
-import com.raisedeveloper.server.domain.exercise.dto.CharacterDto;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseResultRequest;
-import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionCompleteResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionUpdateRequest;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionValidListResponse;
-import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionValidResponse;
 import com.raisedeveloper.server.domain.exercise.infra.ExerciseResultRepository;
 import com.raisedeveloper.server.domain.exercise.infra.ExerciseSessionRepository;
-import com.raisedeveloper.server.domain.notification.application.NotificationService;
+import com.raisedeveloper.server.domain.exercise.mapper.ExerciseSessionMapper;
 import com.raisedeveloper.server.domain.routine.domain.RoutineStep;
-import com.raisedeveloper.server.domain.user.domain.UserCharacter;
 import com.raisedeveloper.server.global.exception.CustomException;
 import com.raisedeveloper.server.global.exception.ErrorCode;
 
@@ -36,8 +32,7 @@ public class ExerciseSessionService {
 	private final ExerciseSessionRepository exerciseSessionRepository;
 	private final ExerciseResultRepository exerciseResultRepository;
 	private final com.raisedeveloper.server.domain.routine.infra.RoutineStepRepository routineStepRepository;
-	private final com.raisedeveloper.server.domain.user.infra.UserCharacterRepository userCharacterRepository;
-	private final NotificationService notificationService;
+	private final ExerciseSessionMapper exerciseSessionMapper;
 
 	public ExerciseSessionResponse getExerciseSession(Long userId, Long sessionId) {
 		ExerciseSession session = exerciseSessionRepository
@@ -51,47 +46,32 @@ public class ExerciseSessionService {
 
 		log.info("Exercise session retrieved: sessionId={}, userId={}", sessionId, userId);
 
-		return ExerciseSessionResponse.of(session, routineSteps);
+		return exerciseSessionMapper.toSessionResponse(session, routineSteps);
 	}
 
 	public ExerciseSessionValidListResponse getValidExerciseSessions(Long userId) {
-		List<ExerciseSessionValidResponse> sessions = exerciseSessionRepository
-			.findByUserIdAndIsRoutineCompletedIsNullOrderByCreatedAtDesc(userId)
-			.stream()
-			.map(
-				session -> new ExerciseSessionValidResponse(
-					session.getId(),
-					session.getRoutine().getId(),
-					session.getCreatedAt())
-			)
-			.toList();
-
-		if (sessions.isEmpty()) {
-			return new ExerciseSessionValidListResponse(null);
-		}
-
-		return new ExerciseSessionValidListResponse(sessions);
+		List<ExerciseSession> sessions = exerciseSessionRepository
+			.findByUserIdAndIsRoutineCompletedIsNullOrderByCreatedAtDesc(userId);
+		return exerciseSessionMapper.toValidListResponse(sessions);
 	}
 
 	@Transactional
-	public ExerciseSessionCompleteResponse completeExerciseSession(
-		Long userId,
-		Long sessionId,
-		ExerciseSessionUpdateRequest request
-	) {
-
-		ExerciseSession session = exerciseSessionRepository
+	public ExerciseSession getSessionForUpdate(Long userId, Long sessionId) {
+		return exerciseSessionRepository
 			.findByIdAndUserIdWithRoutine(sessionId, userId)
 			.orElseThrow(
 				() -> new CustomException(ErrorCode.EXERCISE_SESSION_NOT_FOUND)
 			);
+	}
 
+	@Transactional
+	public long updateSessionAndResults(ExerciseSession session, ExerciseSessionUpdateRequest request) {
 		long completedCount = countCompletedSteps(request.exerciseResult());
 		boolean hasSuccess = completedCount >= 1;
 		session.updateSession(request.startAt(), request.endAt(), hasSuccess);
 
 		List<ExerciseResult> existingResults = exerciseResultRepository
-			.findByExerciseSessionIdWithDetails(sessionId);
+			.findByExerciseSessionIdWithDetails(session.getId());
 
 		Map<Long, ExerciseResult> resultMap = existingResults.stream()
 			.collect(Collectors.toMap(
@@ -103,7 +83,7 @@ public class ExerciseSessionService {
 			ExerciseResult result = resultMap.get(resultRequest.routineStepId());
 			if (result == null) {
 				log.warn("ExerciseResult not found: sessionId={}, routineStepId={}",
-					sessionId, resultRequest.routineStepId());
+					session.getId(), resultRequest.routineStepId());
 				continue;
 			}
 
@@ -116,63 +96,19 @@ public class ExerciseSessionService {
 			);
 		}
 
-		int earnedExp = calculateEarnedExp(completedCount);
-		int earnedStatusScore = calculateEarnedStatusScore(completedCount);
+		return completedCount;
+	}
 
-		UserCharacter character = userCharacterRepository.findByUserId(userId)
-			.orElseThrow(() -> new CustomException(ErrorCode.CHARACTER_NOT_SET));
-
-		character.addExp(earnedExp);
-		character.addStatusScore(earnedStatusScore);
-		boolean hasCompletedToday = hasCompletedSessionToday(userId);
-		if (!hasCompletedToday) {
-			character.incrementStreak();
-		}
-
-		CharacterDto characterDto = new CharacterDto(
-			character.getLevel(),
-			character.getExp(),
-			character.getStreak(),
-			character.getStatusScore()
-		);
-
-		log.info("Exercise session completed: sessionId={}, userId={}, earnedExp={}, earnedStatusScore={}",
-			sessionId, userId, earnedExp, earnedStatusScore);
-
-		if (completedCount == 0) {
-			notificationService.createStretchingFailed(session.getUser());
-		} else {
-			notificationService.createStretchingSuccess(session.getUser(), earnedExp);
-		}
-
-		return new ExerciseSessionCompleteResponse(
-			sessionId,
-			true,
-			earnedExp,
-			earnedStatusScore,
-			characterDto,
-			List.of() // TODO: Quest 기능 구현 시 실제 퀘스트 진행도 반환
-		);
+	public boolean hasCompletedSessionToday(Long userId) {
+		java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul"));
+		java.time.LocalDateTime startAt = today.atStartOfDay();
+		java.time.LocalDateTime endAt = today.plusDays(1).atStartOfDay();
+		return exerciseSessionRepository.existsCompletedInRange(userId, startAt, endAt);
 	}
 
 	private long countCompletedSteps(List<ExerciseResultRequest> results) {
 		return results.stream()
 			.filter(r -> r.status().name().equals("COMPLETED"))
 			.count();
-	}
-
-	private int calculateEarnedExp(long completedCount) {
-		return (int)completedCount * 10;
-	}
-
-	private int calculateEarnedStatusScore(long completedCount) {
-		return (int)completedCount;
-	}
-
-	private boolean hasCompletedSessionToday(Long userId) {
-		java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul"));
-		java.time.LocalDateTime startAt = today.atStartOfDay();
-		java.time.LocalDateTime endAt = today.plusDays(1).atStartOfDay();
-		return exerciseSessionRepository.existsCompletedInRange(userId, startAt, endAt);
 	}
 }

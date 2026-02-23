@@ -1,5 +1,6 @@
 package com.raisedeveloper.server.domain.user.dto;
 
+import static com.raisedeveloper.server.global.exception.ErrorMessageConstants.*;
 import static com.raisedeveloper.server.global.validation.RegexPatterns.*;
 
 import java.time.LocalTime;
@@ -12,22 +13,22 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
 public record AlarmSettingsRequest(
-	@NotNull
-	@Min(10)
-	@Max(600)
+	@NotNull(message = USER_ALARM_INTERVAL_REQUIRED_MESSAGE)
+	@Min(value = 10, message = USER_ALARM_INTERVAL_MIN_MESSAGE)
+	@Max(value = 600, message = USER_ALARM_INTERVAL_MAX_MESSAGE)
 	short interval,
 
-	@NotNull
+	@NotNull(message = USER_ALARM_ACTIVE_START_REQUIRED_MESSAGE)
 	LocalTime activeStartAt,
 
-	@NotNull
+	@NotNull(message = USER_ALARM_ACTIVE_END_REQUIRED_MESSAGE)
 	LocalTime activeEndAt,
 
 	LocalTime focusStartAt,
 
 	LocalTime focusEndAt,
 
-	@NotEmpty
-	List<@Pattern(regexp = REPEAT_DAY_REGEX) String> repeatDays
+	@NotEmpty(message = USER_ALARM_REPEAT_DAYS_REQUIRED_MESSAGE)
+	List<@Pattern(regexp = REPEAT_DAY_REGEX, message = USER_ALARM_REPEAT_DAY_INVALID_MESSAGE) String> repeatDays
 ) {
 }

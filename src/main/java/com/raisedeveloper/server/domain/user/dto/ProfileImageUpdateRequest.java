@@ -1,11 +1,11 @@
 package com.raisedeveloper.server.domain.user.dto;
 
-import static com.raisedeveloper.server.domain.common.ValidationConstants.*;
+import static com.raisedeveloper.server.global.exception.ErrorMessageConstants.*;
 
 import jakarta.validation.constraints.NotBlank;
 
 public record ProfileImageUpdateRequest(
-	@NotBlank(message = IMAGE_PATH_REQUIRED)
+	@NotBlank(message = USER_PROFILE_IMAGE_PATH_REQUIRED_MESSAGE)
 	String imagePath
 ) {
 }

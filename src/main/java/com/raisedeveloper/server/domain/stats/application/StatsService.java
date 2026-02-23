@@ -11,10 +11,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.raisedeveloper.server.domain.exercise.infra.ExerciseSessionRepository;
-import com.raisedeveloper.server.domain.stats.dto.GrassDataDto;
 import com.raisedeveloper.server.domain.stats.dto.GrassStatsProjection;
 import com.raisedeveloper.server.domain.stats.dto.GrassStatsResponse;
 import com.raisedeveloper.server.domain.stats.enums.ViewType;
+import com.raisedeveloper.server.domain.stats.mapper.StatsMapper;
 import com.raisedeveloper.server.global.exception.CustomException;
 import com.raisedeveloper.server.global.exception.ErrorCode;
 import com.raisedeveloper.server.global.exception.ErrorDetail;
@@ -29,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 public class StatsService {
 
 	private final ExerciseSessionRepository exerciseSessionRepository;
+	private final StatsMapper statsMapper;
 
 	public GrassStatsResponse getGrassStats(Long userId, ViewType viewType, String month) {
 		LocalDateTime startDate;
@@ -64,16 +65,11 @@ public class StatsService {
 			endDate
 		);
 
-		List<GrassDataDto> grassData = projections.stream()
-			.map(p -> new GrassDataDto(
-				p.getDate(),
-				p.getTargetCount() != null ? p.getTargetCount().intValue() : 0,
-				p.getSuccessCount() != null ? p.getSuccessCount().intValue() : 0
-			))
-			.toList();
+		GrassStatsResponse response = statsMapper.toGrassStatsResponse(projections);
 
-		log.info("Grass stats retrieved: userId={}, viewType={}, dataCount={}", userId, viewType, grassData.size());
+		log.info("Grass stats retrieved: userId={}, viewType={}, dataCount={}", userId, viewType,
+			response.grass().size());
 
-		return GrassStatsResponse.from(grassData);
+		return response;
 	}
 }

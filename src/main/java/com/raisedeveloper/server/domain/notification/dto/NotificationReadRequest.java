@@ -1,13 +1,13 @@
 package com.raisedeveloper.server.domain.notification.dto;
 
-import java.time.LocalDateTime;
-
-import com.fasterxml.jackson.annotation.JsonFormat;
+import static com.raisedeveloper.server.global.exception.ErrorMessageConstants.*;
 
 import jakarta.validation.constraints.NotNull;
 
 public record NotificationReadRequest(
-	@NotNull
-	LocalDateTime lastNotificationTime
+	@NotNull(message = NOTIFICATION_OLDEST_ID_REQUIRED_MESSAGE)
+	Long oldestNotificationId,
+	@NotNull(message = NOTIFICATION_LATEST_ID_REQUIRED_MESSAGE)
+	Long latestNotificationId
 ) {
 }

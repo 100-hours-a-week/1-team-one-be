@@ -3,16 +3,18 @@ package com.raisedeveloper.server.domain.exercise.application;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.raisedeveloper.server.domain.exercise.domain.Exercise;
 import com.raisedeveloper.server.domain.exercise.domain.ExerciseResult;
 import com.raisedeveloper.server.domain.exercise.domain.ExerciseSession;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseListResponse;
-import com.raisedeveloper.server.domain.exercise.dto.ExerciseResponse;
 import com.raisedeveloper.server.domain.exercise.infra.ExerciseRepository;
 import com.raisedeveloper.server.domain.exercise.infra.ExerciseResultRepository;
 import com.raisedeveloper.server.domain.exercise.infra.ExerciseSessionRepository;
+import com.raisedeveloper.server.domain.exercise.mapper.ExerciseMapper;
 import com.raisedeveloper.server.domain.routine.domain.Routine;
 import com.raisedeveloper.server.domain.routine.domain.RoutineStep;
 import com.raisedeveloper.server.domain.routine.infra.RoutineRepository;
@@ -35,6 +37,7 @@ public class ExerciseService {
 	private final ExerciseSessionRepository exerciseSessionRepository;
 	private final ExerciseResultRepository exerciseResultRepository;
 	private final RoutineStepRepository routineStepRepository;
+	private final ExerciseMapper exerciseMapper;
 
 	@Transactional
 	public ExerciseSession createSession(User user) {
@@ -57,12 +60,9 @@ public class ExerciseService {
 		return savedSession;
 	}
 
+	@Cacheable(cacheNames = "exerciseList")
 	public ExerciseListResponse getAllExercises() {
-		List<ExerciseResponse> exercises = exerciseRepository.findByIsDeprecatedFalse()
-			.stream()
-			.map(ExerciseResponse::from)
-			.toList();
-
-		return ExerciseListResponse.from(exercises);
+		List<Exercise> exercises = exerciseRepository.findByIsDeprecatedFalse();
+		return exerciseMapper.toExerciseListResponse(exercises);
 	}
 }

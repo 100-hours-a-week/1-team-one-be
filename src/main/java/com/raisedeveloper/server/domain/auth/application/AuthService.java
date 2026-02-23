@@ -1,5 +1,7 @@
 package com.raisedeveloper.server.domain.auth.application;
 
+import static com.raisedeveloper.server.global.exception.ErrorMessageConstants.*;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -18,6 +20,7 @@ import com.raisedeveloper.server.domain.auth.dto.AuthSignUpResponse;
 import com.raisedeveloper.server.domain.auth.dto.Tokens;
 import com.raisedeveloper.server.domain.auth.infra.FcmTokenRepository;
 import com.raisedeveloper.server.domain.auth.infra.RefreshTokenRepository;
+import com.raisedeveloper.server.domain.auth.mapper.AuthMapper;
 import com.raisedeveloper.server.domain.user.domain.User;
 import com.raisedeveloper.server.domain.user.domain.UserProfile;
 import com.raisedeveloper.server.domain.user.infra.UserProfileRepository;
@@ -44,6 +47,7 @@ public class AuthService {
 	private final PasswordEncoder passwordEncoder;
 	private final TokenHasher tokenHasher;
 	private final JwtTokenProvider jwtTokenProvider;
+	private final AuthMapper authMapper;
 
 	@Transactional
 	public AuthSignUpResponse signup(AuthSignUpRequest request) {
@@ -56,7 +60,7 @@ public class AuthService {
 
 		User userSaved = userRepository.save(user);
 		userProfileRepository.save(profile);
-		return AuthSignUpResponse.from(userSaved);
+		return authMapper.toSignUpResponse(userSaved);
 	}
 
 	@Transactional
@@ -75,21 +79,16 @@ public class AuthService {
 		String tokenHash = tokenHasher.hmacSha256Base64Url(refreshToken.token());
 		refreshTokenRepository.save(new RefreshToken(user, tokenHash, refreshToken.expiresAt()));
 
-		return AuthLoginResponse.from(tokens, user);
+		return authMapper.toLoginResponse(tokens, user);
 	}
 
 	@Transactional
 	public AuthRefreshResponse refresh(AuthRefreshRequest request) {
-		jwtTokenProvider.validate(request.refreshToken());
-
-		JwtClaims jwtClaims = jwtTokenProvider.extractClaims(request.refreshToken());
-		if (jwtClaims.tokenType() != TokenType.REFRESH) {
-			throw new CustomException(ErrorCode.INVALID_TOKEN);
-		}
+		JwtClaims jwtClaims = jwtTokenProvider.extractClaims(request.refreshToken(), TokenType.REFRESH);
 
 		String tokenHash = tokenHasher.hmacSha256Base64Url(request.refreshToken());
 		RefreshToken refreshToken = refreshTokenRepository.findByTokenHash(tokenHash).orElseThrow(
-			() -> new CustomException(ErrorCode.INVALID_TOKEN));
+			() -> new CustomException(ErrorCode.REFRESH_TOKEN_INVALID));
 		validateRefreshTokenState(refreshToken);
 		refreshToken.revoke();
 
@@ -143,7 +142,7 @@ public class AuthService {
 		if (userRepository.existsByEmail(email)) {
 			throw new CustomException(
 				ErrorCode.USER_EMAIL_DUPLICATED,
-				List.of(ErrorDetail.field("email", "email already in use"))
+				List.of(ErrorDetail.field("email", USER_EMAIL_DUPLICATED_MESSAGE))
 			);
 		}
 		return true;
@@ -153,7 +152,7 @@ public class AuthService {
 		if (userProfileRepository.existsByNickname(nickname)) {
 			throw new CustomException(
 				ErrorCode.USER_NICKNAME_DUPLICATED,
-				List.of(ErrorDetail.field("nickname", "nickname already in use"))
+				List.of(ErrorDetail.field("nickname", USER_NICKNAME_DUPLICATED_MESSAGE))
 			);
 		}
 		return true;
@@ -182,10 +181,10 @@ public class AuthService {
 
 	private void validateRefreshTokenState(RefreshToken refreshToken) {
 		if (refreshToken.getRevokedAt() != null) {
-			throw new CustomException(ErrorCode.INVALID_TOKEN);
+			throw new CustomException(ErrorCode.REFRESH_TOKEN_INVALID);
 		}
 		if (refreshToken.getExpiresAt().isBefore(LocalDateTime.now())) {
-			throw new CustomException(ErrorCode.EXPIRED_TOKEN);
+			throw new CustomException(ErrorCode.REFRESH_TOKEN_EXPIRED);
 		}
 	}
 }

@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.raisedeveloper.server.domain.exercise.application.ExerciseService;
+import com.raisedeveloper.server.domain.exercise.application.ExerciseSessionFacade;
 import com.raisedeveloper.server.domain.exercise.application.ExerciseSessionService;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseListResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionCompleteResponse;
@@ -14,7 +15,7 @@ import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionUpdateRequest;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionValidListResponse;
 import com.raisedeveloper.server.global.response.ApiResponse;
-import com.raisedeveloper.server.global.security.utils.AuthUtils;
+import com.raisedeveloper.server.global.security.currentuser.CurrentUser;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,35 +26,40 @@ public class ExerciseController {
 
 	private final ExerciseService exerciseService;
 	private final ExerciseSessionService exerciseSessionService;
+	private final ExerciseSessionFacade exerciseSessionFacade;
 
 	@GetMapping("/exercises")
 	public ApiResponse<ExerciseListResponse> getAllExercises() {
-		return ApiResponse.success("GET_EXERCISES_SUCCESS", exerciseService.getAllExercises());
+		return ApiResponse.of("GET_EXERCISES_SUCCESS", exerciseService.getAllExercises());
 	}
 
 	@GetMapping("/me/exercise-sessions/valid")
-	public ApiResponse<ExerciseSessionValidListResponse> getValidExerciseSessions() {
-		Long userId = AuthUtils.resolveUserIdFromContext();
+	public ApiResponse<ExerciseSessionValidListResponse> getValidExerciseSessions(@CurrentUser Long userId) {
 		ExerciseSessionValidListResponse response = exerciseSessionService
 			.getValidExerciseSessions(userId);
-		return ApiResponse.success("GET_VALID_EXERCISE_SESSION_SUCCESS", response);
+		return ApiResponse.of("GET_VALID_EXERCISE_SESSION_SUCCESS", response);
 	}
 
 	@GetMapping("/me/exercise-sessions/{sessionId}")
-	public ApiResponse<ExerciseSessionResponse> getExerciseSession(@PathVariable Long sessionId) {
-		Long userId = AuthUtils.resolveUserIdFromContext();
+	public ApiResponse<ExerciseSessionResponse> getExerciseSession(
+		@CurrentUser Long userId,
+		@PathVariable Long sessionId
+	) {
 		ExerciseSessionResponse response = exerciseSessionService.getExerciseSession(userId, sessionId);
-		return ApiResponse.success("_GET_SESSION_SUCCESS", response);
+		return ApiResponse.of("GET_SESSION_SUCCESS", response);
 	}
 
 	@PatchMapping("/me/exercise-sessions/{sessionId}")
 	public ApiResponse<ExerciseSessionCompleteResponse> updateExerciseSession(
+		@CurrentUser Long userId,
 		@PathVariable Long sessionId,
 		@Valid @RequestBody ExerciseSessionUpdateRequest request
 	) {
-		Long userId = AuthUtils.resolveUserIdFromContext();
-		ExerciseSessionCompleteResponse response = exerciseSessionService.completeExerciseSession(userId, sessionId,
-			request);
-		return ApiResponse.success("COMPLETE_EXERCISE_SESSION_SUCCESS", response);
+		ExerciseSessionCompleteResponse response = exerciseSessionFacade.completeExerciseSession(
+			userId,
+			sessionId,
+			request
+		);
+		return ApiResponse.of("COMPLETE_EXERCISE_SESSION_SUCCESS", response);
 	}
 }
