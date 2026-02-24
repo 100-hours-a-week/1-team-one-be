@@ -1,0 +1,36 @@
+# Version Control
+.git
+.gitignore
+.gitattributes
+
+# Build Outputs
+build/
+out/
+bin/
+
+# Gradle
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# Logs
+logs/
+*.log
+
+# OS Specific
+.DS_Store
+Thumbs.db
+
+# Documentation & CI/CD
+.github/
+*.md
+
+# Docker
+Dockerfile
+.dockerignore
