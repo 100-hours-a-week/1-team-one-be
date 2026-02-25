@@ -60,6 +60,7 @@ public final class ErrorMessageConstants {
 	public static final String AI_ROUTINE_EXERCISE_ID_MISSING_MESSAGE = "운동 ID가 누락되었습니다.";
 	public static final String AI_ROUTINE_TARGET_REPS_MISSING_MESSAGE = "목표 반복 횟수가 누락되었습니다.";
 	public static final String AI_ROUTINE_DURATION_TIME_MISSING_MESSAGE = "운동 지속 시간이 누락되었습니다.";
+	public static final String AI_ROUTINE_EYES_INVALID_MESSAGE = "눈 운동 루틴 데이터에 이상이 발생했습니다.";
 	public static final String AI_ROUTINE_GENERATION_FAILED_MESSAGE = "AI 루틴 생성에 실패했습니다.";
 
 	// Post Domain (error reasons)
