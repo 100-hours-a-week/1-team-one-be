@@ -156,7 +156,7 @@ public class RoutineService {
 					exercise,
 					stepDto.targetReps() != null ? stepDto.targetReps().shortValue() : null,
 					stepDto.durationTime() != null ? stepDto.durationTime().shortValue() : null,
-					stepDto.limitTime().shortValue(),
+					EYES.equals(stepDto.type()) ? 0 : stepDto.limitTime().shortValue(),
 					stepDto.stepOrder().shortValue()
 				);
 				routineStepRepository.save(step);
@@ -232,6 +232,18 @@ public class RoutineService {
 			throw new CustomException(
 				ErrorCode.AI_ROUTINE_DURATION_TIME_MISSING,
 				List.of(ErrorDetail.field("exerciseId", stepDto.exerciseId()))
+			);
+		}
+
+		if (EYES.equals(stepDto.type()) && (stepDto.durationTime() != null || stepDto.limitTime() != null)) {
+			throw new CustomException(
+				ErrorCode.AI_ROUTINE_EYES_INVALID,
+				List.of(
+					ErrorDetail.field("exerciseId", stepDto.exerciseId()),
+					ErrorDetail.field("type", stepDto.type().name()),
+					ErrorDetail.field("durationTime", String.valueOf(stepDto.durationTime())),
+					ErrorDetail.field("limitTime", String.valueOf(stepDto.limitTime()))
+				)
 			);
 		}
 	}
