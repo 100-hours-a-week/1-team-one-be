@@ -62,22 +62,8 @@ public class RoutineGenerationJobService {
 			aiRoutineClient.requestRoutineGenerationAsync(request);
 			job.markRequested(LocalDateTime.now());
 		} catch (CustomException e) {
-			log.error(
-				"AI routine async request failed: jobId={}, userId={}, errorCode={}, errors={}",
-				jobId,
-				user.getId(),
-				e.getErrorCode(),
-				e.getErrors(),
-				e
-			);
 			job.markFailed(LocalDateTime.now(), e.getErrorCode().getReason(), null);
 		} catch (Exception e) {
-			log.error(
-				"AI routine async request failed with unexpected error: jobId={}, userId={}",
-				jobId,
-				user.getId(),
-				e
-			);
 			job.markFailed(LocalDateTime.now(), e.getMessage(), null);
 		}
 		return job;
@@ -85,29 +71,17 @@ public class RoutineGenerationJobService {
 
 	@Transactional
 	public void handleCallback(AiRoutineCallbackRequest request) {
-		log.info(
-			"Received AI routine callback: taskId={}, userId={}, status={}, errorMessage={}",
-			request.taskId(),
-			request.userId(),
-			request.status(),
-			request.errorMessage()
-		);
+		log.info("AI routine callback payload: {}", request);
 
 		Optional<RoutineGenerationJob> jobOpt = jobRepository.findByJobId(request.taskId());
 		if (jobOpt.isEmpty()) {
-			log.warn("RoutineGenerationJob not found for callback: taskId={}, payload={}", request.taskId(), request);
+			log.warn("RoutineGenerationJob not found for callback: taskId={}", request.taskId());
 			return;
 		}
 
 		RoutineGenerationJob job = jobOpt.get();
 		if (job.getStatus() == RoutineGenerationJobStatus.COMPLETED
 			|| job.getStatus() == RoutineGenerationJobStatus.FAILED) {
-			log.info(
-				"Ignoring callback for finalized job: taskId={}, currentStatus={}, callbackStatus={}",
-				request.taskId(),
-				job.getStatus(),
-				request.status()
-			);
 			return;
 		}
 
@@ -126,49 +100,20 @@ public class RoutineGenerationJobService {
 				);
 				job.markCompleted(LocalDateTime.now(), writePayload(aiResponse));
 			} catch (CustomException e) {
-				log.error(
-					"Routine callback business validation failed: taskId={}, jobId={}, errorCode={}, errors={}, payload={}",
-					request.taskId(),
-					job.getJobId(),
-					e.getErrorCode(),
-					e.getErrors(),
-					request,
-					e
-				);
 				job.markFailed(LocalDateTime.now(), e.getErrorCode().getReason(), writePayload(aiResponse));
 				return;
 			} catch (Exception e) {
-				log.error(
-					"Routine generation callback processing failed: taskId={}, jobId={}, payload={}",
-					request.taskId(),
-					job.getJobId(),
-					request,
-					e
-				);
+				log.error("Routine generation callback processing failed: taskId={}", request.taskId(), e);
 				throw new CustomException(ErrorCode.AI_ROUTINE_GENERATION_FAILED);
 			}
 			return;
 		}
 
 		if (request.status() == RoutineGenerationJobStatus.FAILED) {
-			log.warn(
-				"AI routine callback reported failure: taskId={}, jobId={}, errorMessage={}, payload={}",
-				request.taskId(),
-				job.getJobId(),
-				request.errorMessage(),
-				request
-			);
 			job.markFailed(LocalDateTime.now(), request.errorMessage(), writePayload(request));
 			return;
 		}
 
-		log.warn(
-			"AI routine callback reported unknown status: taskId={}, jobId={}, status={}, payload={}",
-			request.taskId(),
-			job.getJobId(),
-			request.status(),
-			request
-		);
 		job.markFailed(LocalDateTime.now(), "UNKNOWN_CALLBACK_STATUS", writePayload(request));
 	}
 

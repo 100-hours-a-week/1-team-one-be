@@ -235,7 +235,7 @@ public class RoutineService {
 			);
 		}
 
-		if (EYES.equals(stepDto.type()) && (stepDto.durationTime() != null || stepDto.limitTime() != null)) {
+		if (EYES.equals(stepDto.type()) && (stepDto.durationTime() != null || stepDto.targetReps() != null)) {
 			throw new CustomException(
 				ErrorCode.AI_ROUTINE_EYES_INVALID,
 				List.of(
