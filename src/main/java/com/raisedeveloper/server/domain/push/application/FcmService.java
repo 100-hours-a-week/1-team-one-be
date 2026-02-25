@@ -37,8 +37,8 @@ public class FcmService implements PushService {
 	@Value("${server.base-url}")
 	private String serverBaseUrl;
 
-	@Value("${storage.gcs.bucket-name:}")
-	private String gcsBucketName;
+	@Value("${icon.url}")
+	private String iconUrl;
 
 	@Override
 	@Async("pushExecutor")
@@ -59,7 +59,6 @@ public class FcmService implements PushService {
 
 		try {
 			String link = buildSessionLink(session);
-			String iconUrl = buildIconUrl();
 			sendMessageToToken(fcmToken.getToken(), buildSessionData(session), link, iconUrl);
 			fcmTokenTxService.markTokenUsed(fcmToken);
 
@@ -124,10 +123,6 @@ public class FcmService implements PushService {
 		String normalizedBase = serverBaseUrl.endsWith("/") ? serverBaseUrl.substring(0, serverBaseUrl.length() - 1)
 			: serverBaseUrl;
 		return normalizedBase + "/stretch/" + session.getId();
-	}
-
-	private String buildIconUrl() {
-		return "https://storage.googleapis.com/" + gcsBucketName + "/icons/logo-192.png";
 	}
 
 	private void handleSendFailure(FcmToken fcmToken, Exception exception) {
