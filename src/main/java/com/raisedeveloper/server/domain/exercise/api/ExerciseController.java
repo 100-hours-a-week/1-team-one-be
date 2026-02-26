@@ -11,6 +11,7 @@ import com.raisedeveloper.server.domain.exercise.application.ExerciseSessionFaca
 import com.raisedeveloper.server.domain.exercise.application.ExerciseSessionService;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseListResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionCompleteResponse;
+import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionReportCreateResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionUpdateRequest;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionValidListResponse;
@@ -61,5 +62,16 @@ public class ExerciseController {
 			request
 		);
 		return ApiResponse.of("COMPLETE_EXERCISE_SESSION_SUCCESS", response);
+	}
+
+	@PatchMapping("/v2/me/exercise-sessions/{sessionId}")
+	public ApiResponse<ExerciseSessionReportCreateResponse> updateExerciseSessionV2(
+		@CurrentUser Long userId,
+		@PathVariable Long sessionId,
+		@Valid @RequestBody ExerciseSessionUpdateRequest request
+	) {
+		ExerciseSessionReportCreateResponse response = exerciseSessionFacade
+			.completeExerciseSessionV2(userId, sessionId, request);
+		return ApiResponse.of("CREATE_SESSION_REPORT_SUCCESS", response);
 	}
 }
