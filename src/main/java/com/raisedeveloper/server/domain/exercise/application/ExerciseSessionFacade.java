@@ -15,11 +15,7 @@ import com.raisedeveloper.server.domain.exercise.infra.ExerciseSessionReportRepo
 import com.raisedeveloper.server.domain.exercise.mapper.ExerciseSessionMapper;
 import com.raisedeveloper.server.domain.notification.application.NotificationService;
 import com.raisedeveloper.server.domain.user.application.SessionRewardResult;
-import com.raisedeveloper.server.domain.user.application.UserCharacterService;
 import com.raisedeveloper.server.domain.user.domain.UserCharacter;
-import com.raisedeveloper.server.domain.user.infra.UserCharacterRepository;
-import com.raisedeveloper.server.global.exception.CustomException;
-import com.raisedeveloper.server.global.exception.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,10 +26,9 @@ import lombok.extern.slf4j.Slf4j;
 public class ExerciseSessionFacade {
 
 	private final ExerciseSessionService exerciseSessionService;
-	private final UserCharacterService userCharacterService;
+	private final SessionRewardService sessionRewardService;
 	private final NotificationService notificationService;
 	private final ExerciseSessionReportRepository exerciseSessionReportRepository;
-	private final UserCharacterRepository userCharacterRepository;
 	private final ExerciseSessionMapper exerciseSessionMapper;
 
 	@Transactional
@@ -43,13 +38,11 @@ public class ExerciseSessionFacade {
 		ExerciseSessionUpdateRequest request
 	) {
 		ExerciseSession session = exerciseSessionService.getSessionForUpdate(userId, sessionId);
+		SessionRewardPreparation rewardPreparation = sessionRewardService.prepare(userId);
 		long completedCount = updateSessionData(session, request);
 
-		SessionRewardResult rewardResult = userCharacterService.applySessionReward(
-			userId,
-			completedCount,
-			exerciseSessionService.hasCompletedSessionToday(userId)
-		);
+		SessionRewardResult rewardResult = sessionRewardService.apply(userId, completedCount, rewardPreparation)
+			.rewardResult();
 
 		int earnedExp = rewardResult.earnedExp();
 		int earnedStatusScore = rewardResult.earnedStatusScore();
@@ -80,18 +73,10 @@ public class ExerciseSessionFacade {
 		ExerciseSessionUpdateRequest request
 	) {
 		ExerciseSession session = exerciseSessionService.getSessionForUpdate(userId, sessionId);
+		SessionRewardPreparation rewardPreparation = sessionRewardService.prepare(userId);
 		long completedCount = updateSessionData(session, request);
-
-		UserCharacter beforeReward = userCharacterRepository.findByUserId(userId)
-			.orElseThrow(() -> new CustomException(ErrorCode.CHARACTER_NOT_SET));
-		int previousExp = beforeReward.getExp();
-		int previousStatusScore = beforeReward.getStatusScore();
-
-		SessionRewardResult rewardResult = userCharacterService.applySessionReward(
-			userId,
-			completedCount,
-			exerciseSessionService.hasCompletedSessionToday(userId)
-		);
+		SessionRewardOutcome rewardOutcome = sessionRewardService.apply(userId, completedCount, rewardPreparation);
+		SessionRewardResult rewardResult = rewardOutcome.rewardResult();
 
 		UserCharacter character = rewardResult.character();
 		ExerciseSessionReport exerciseSessionReport = exerciseSessionReportRepository.save(
@@ -99,10 +84,10 @@ public class ExerciseSessionFacade {
 				session,
 				session.getUser(),
 				character.getLevel(),
-				previousExp,
+				rewardOutcome.previousExp(),
 				rewardResult.earnedExp(),
 				character.getStreak(),
-				previousStatusScore,
+				rewardOutcome.previousStatusScore(),
 				rewardResult.earnedStatusScore()
 			)
 		);
@@ -114,8 +99,7 @@ public class ExerciseSessionFacade {
 			notificationService.createStretchingFailed(session.getUser());
 		} else {
 			notificationService.createStretchingSuccess(
-				session.getUser(),
-				rewardResult.earnedExp()
+				session.getUser(), rewardResult.earnedExp()
 			);
 		}
 
