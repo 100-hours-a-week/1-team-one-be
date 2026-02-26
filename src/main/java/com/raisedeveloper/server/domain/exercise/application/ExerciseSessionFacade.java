@@ -42,19 +42,26 @@ public class ExerciseSessionFacade {
 		Long sessionId,
 		ExerciseSessionUpdateRequest request
 	) {
-		SessionCompletionContext completion = completeSession(userId, sessionId, request);
+		ExerciseSession session = exerciseSessionService.getSessionForUpdate(userId, sessionId);
+		long completedCount = updateSessionData(session, request);
 
-		int earnedExp = completion.rewardResult().earnedExp();
-		int earnedStatusScore = completion.rewardResult().earnedStatusScore();
-		CharacterDto characterDto = exerciseSessionMapper.toCharacterDto(completion.rewardResult().character());
+		SessionRewardResult rewardResult = userCharacterService.applySessionReward(
+			userId,
+			completedCount,
+			exerciseSessionService.hasCompletedSessionToday(userId)
+		);
+
+		int earnedExp = rewardResult.earnedExp();
+		int earnedStatusScore = rewardResult.earnedStatusScore();
+		CharacterDto characterDto = exerciseSessionMapper.toCharacterDto(rewardResult.character());
 
 		log.info("Exercise session completed: sessionId={}, userId={}, earnedExp={}, earnedStatusScore={}",
 			sessionId, userId, earnedExp, earnedStatusScore);
 
-		if (completion.completedCount() == 0) {
-			notificationService.createStretchingFailed(completion.session().getUser());
+		if (completedCount == 0) {
+			notificationService.createStretchingFailed(session.getUser());
 		} else {
-			notificationService.createStretchingSuccess(completion.session().getUser(), earnedExp);
+			notificationService.createStretchingSuccess(session.getUser(), earnedExp);
 		}
 
 		return exerciseSessionMapper.toCompleteResponse(
@@ -72,52 +79,8 @@ public class ExerciseSessionFacade {
 		Long sessionId,
 		ExerciseSessionUpdateRequest request
 	) {
-		SessionCompletionContext completion = completeSession(userId, sessionId, request);
-
-		UserCharacter character = completion.rewardResult().character();
-		ExerciseSessionReport exerciseSessionReport = exerciseSessionReportRepository.save(
-			new ExerciseSessionReport(
-				completion.session(),
-				completion.session().getUser(),
-				character.getLevel(),
-				completion.previousExp(),
-				completion.rewardResult().earnedExp(),
-				character.getStreak(),
-				completion.previousStatusScore(),
-				completion.rewardResult().earnedStatusScore()
-			)
-		);
-
-		log.info("Exercise session v2 completed and report created: sessionId={}, userId={}, reportId={}",
-			sessionId, userId, exerciseSessionReport.getId());
-
-		if (completion.completedCount() == 0) {
-			notificationService.createStretchingFailed(completion.session().getUser());
-		} else {
-			notificationService.createStretchingSuccess(
-				completion.session().getUser(),
-				completion.rewardResult().earnedExp()
-			);
-		}
-
-		return new ExerciseSessionReportCreateResponse(
-			completion.session().getId(),
-			exerciseSessionReport.getId(),
-			completion.session().getRoutine().getId(),
-			completion.session().getStartAt(),
-			completion.session().getEndAt(),
-			completion.session().getIsRoutineCompleted()
-		);
-	}
-
-	private SessionCompletionContext completeSession(
-		Long userId,
-		Long sessionId,
-		ExerciseSessionUpdateRequest request
-	) {
 		ExerciseSession session = exerciseSessionService.getSessionForUpdate(userId, sessionId);
-		long completedCount = exerciseSessionService.updateSessionAndResults(session, request);
-		boolean hasCompletedToday = exerciseSessionService.hasCompletedSessionToday(userId);
+		long completedCount = updateSessionData(session, request);
 
 		UserCharacter beforeReward = userCharacterRepository.findByUserId(userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.CHARACTER_NOT_SET));
@@ -127,24 +90,49 @@ public class ExerciseSessionFacade {
 		SessionRewardResult rewardResult = userCharacterService.applySessionReward(
 			userId,
 			completedCount,
-			hasCompletedToday
+			exerciseSessionService.hasCompletedSessionToday(userId)
 		);
 
-		return new SessionCompletionContext(
-			session,
-			completedCount,
-			previousExp,
-			previousStatusScore,
-			rewardResult
+		UserCharacter character = rewardResult.character();
+		ExerciseSessionReport exerciseSessionReport = exerciseSessionReportRepository.save(
+			new ExerciseSessionReport(
+				session,
+				session.getUser(),
+				character.getLevel(),
+				previousExp,
+				rewardResult.earnedExp(),
+				character.getStreak(),
+				previousStatusScore,
+				rewardResult.earnedStatusScore()
+			)
+		);
+
+		log.info("Exercise session v2 completed and report created: sessionId={}, userId={}, reportId={}",
+			sessionId, userId, exerciseSessionReport.getId());
+
+		if (completedCount == 0) {
+			notificationService.createStretchingFailed(session.getUser());
+		} else {
+			notificationService.createStretchingSuccess(
+				session.getUser(),
+				rewardResult.earnedExp()
+			);
+		}
+
+		return new ExerciseSessionReportCreateResponse(
+			session.getId(),
+			exerciseSessionReport.getId(),
+			session.getRoutine().getId(),
+			session.getStartAt(),
+			session.getEndAt(),
+			session.getIsRoutineCompleted()
 		);
 	}
 
-	private record SessionCompletionContext(
+	private long updateSessionData(
 		ExerciseSession session,
-		long completedCount,
-		int previousExp,
-		int previousStatusScore,
-		SessionRewardResult rewardResult
+		ExerciseSessionUpdateRequest request
 	) {
+		return exerciseSessionService.updateSessionAndResults(session, request);
 	}
 }
