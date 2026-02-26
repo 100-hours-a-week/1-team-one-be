@@ -18,8 +18,8 @@ import lombok.NoArgsConstructor;
 @Getter
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "session_reports")
-public class SessionReport extends CreatedUpdatedEntity {
+@Table(name = "exercise_session_reports")
+public class ExerciseSessionReport extends CreatedUpdatedEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -45,7 +45,7 @@ public class SessionReport extends CreatedUpdatedEntity {
 
 	private int earnedStatusScore;
 
-	public SessionReport(
+	public ExerciseSessionReport(
 		ExerciseSession exerciseSession,
 		User user,
 		short level,

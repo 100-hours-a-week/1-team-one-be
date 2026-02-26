@@ -6,12 +6,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.raisedeveloper.server.domain.exercise.domain.ExerciseSession;
-import com.raisedeveloper.server.domain.exercise.domain.SessionReport;
+import com.raisedeveloper.server.domain.exercise.domain.ExerciseSessionReport;
 import com.raisedeveloper.server.domain.exercise.dto.CharacterDto;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionCompleteResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionReportCreateResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionUpdateRequest;
-import com.raisedeveloper.server.domain.exercise.infra.SessionReportRepository;
+import com.raisedeveloper.server.domain.exercise.infra.ExerciseSessionReportRepository;
 import com.raisedeveloper.server.domain.exercise.mapper.ExerciseSessionMapper;
 import com.raisedeveloper.server.domain.notification.application.NotificationService;
 import com.raisedeveloper.server.domain.user.application.SessionRewardResult;
@@ -32,7 +32,7 @@ public class ExerciseSessionFacade {
 	private final ExerciseSessionService exerciseSessionService;
 	private final UserCharacterService userCharacterService;
 	private final NotificationService notificationService;
-	private final SessionReportRepository sessionReportRepository;
+	private final ExerciseSessionReportRepository exerciseSessionReportRepository;
 	private final UserCharacterRepository userCharacterRepository;
 	private final ExerciseSessionMapper exerciseSessionMapper;
 
@@ -75,8 +75,8 @@ public class ExerciseSessionFacade {
 		SessionCompletionContext completion = completeSession(userId, sessionId, request);
 
 		UserCharacter character = completion.rewardResult().character();
-		SessionReport sessionReport = sessionReportRepository.save(
-			new SessionReport(
+		ExerciseSessionReport exerciseSessionReport = exerciseSessionReportRepository.save(
+			new ExerciseSessionReport(
 				completion.session(),
 				completion.session().getUser(),
 				character.getLevel(),
@@ -89,7 +89,7 @@ public class ExerciseSessionFacade {
 		);
 
 		log.info("Exercise session v2 completed and report created: sessionId={}, userId={}, reportId={}",
-			sessionId, userId, sessionReport.getId());
+			sessionId, userId, exerciseSessionReport.getId());
 
 		if (completion.completedCount() == 0) {
 			notificationService.createStretchingFailed(completion.session().getUser());
@@ -102,7 +102,7 @@ public class ExerciseSessionFacade {
 
 		return new ExerciseSessionReportCreateResponse(
 			completion.session().getId(),
-			sessionReport.getId(),
+			exerciseSessionReport.getId(),
 			completion.session().getRoutine().getId(),
 			completion.session().getStartAt(),
 			completion.session().getEndAt(),
