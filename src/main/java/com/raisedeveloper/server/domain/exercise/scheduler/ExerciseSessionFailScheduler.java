@@ -9,6 +9,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
+
 import com.raisedeveloper.server.domain.exercise.domain.ExerciseResult;
 import com.raisedeveloper.server.domain.exercise.domain.ExerciseSession;
 import com.raisedeveloper.server.domain.exercise.infra.ExerciseResultRepository;
@@ -33,6 +35,7 @@ public class ExerciseSessionFailScheduler {
 	private final NotificationService notificationService;
 
 	@Scheduled(cron = "0 */5 * * * *")
+	@SchedulerLock(name = "ExerciseSessionFailScheduler.failStaleSessions", lockAtMostFor = "PT10M")
 	@Transactional
 	public void failStaleSessions() {
 		LocalDateTime now = LocalDateTime.now();

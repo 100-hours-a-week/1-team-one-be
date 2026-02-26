@@ -47,10 +47,6 @@ on:
         required: true
       AWS_ROLE_ARN:
         required: true
-      STG_ALB_DNS:
-        required: true
-      PROD_ALB_DNS:
-        required: true
 
 
 permissions:
@@ -300,9 +296,9 @@ jobs:
 
           # 나중에는 input environments로 도메인 경로로 바꾸기
           if [[ "${{ inputs.environment }}" == "production" ]]; then
-            TARGET_URL="http://${{ secrets.PROD_ALB_DNS }}/api/actuator/health"
+            TARGET_URL="https://raisedeveloper.com/api/actuator/health"
           else
-            TARGET_URL="http://${{ secrets.STG_ALB_DNS }}/api/actuator/health"
+            TARGET_URL="https://stage.raisedeveloper.com/api/actuator/health"
           fi
           
           # 30초 간격으로 5번 확인 (총 2분 30초 더 대기)

@@ -71,6 +71,8 @@ public class RoutineGenerationJobService {
 
 	@Transactional
 	public void handleCallback(AiRoutineCallbackRequest request) {
+		log.info("AI routine callback payload: {}", request);
+
 		Optional<RoutineGenerationJob> jobOpt = jobRepository.findByJobId(request.taskId());
 		if (jobOpt.isEmpty()) {
 			log.warn("RoutineGenerationJob not found for callback: taskId={}", request.taskId());
