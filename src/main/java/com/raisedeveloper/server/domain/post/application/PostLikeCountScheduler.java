@@ -9,6 +9,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
+
 import com.raisedeveloper.server.domain.post.domain.PostLikeOutbox;
 import com.raisedeveloper.server.domain.post.infra.PostLikeOutboxRepository;
 import com.raisedeveloper.server.domain.post.infra.PostRepository;
@@ -23,6 +25,7 @@ public class PostLikeCountScheduler {
 	private final PostLikeOutboxRepository postLikeOutboxRepository;
 
 	@Scheduled(fixedDelay = 600_000L)
+	@SchedulerLock(name = "PostLikeCountScheduler.refreshLikeCounts", lockAtMostFor = "PT15M")
 	@Transactional
 	public void refreshLikeCounts() {
 		List<PostLikeOutbox> events = postLikeOutboxRepository.findTop1000ByProcessedAtIsNullOrderByIdAsc();

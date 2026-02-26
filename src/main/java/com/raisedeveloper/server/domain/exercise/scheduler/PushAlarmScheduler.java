@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
+
 import com.raisedeveloper.server.domain.exercise.application.AlarmScheduleService;
 import com.raisedeveloper.server.domain.exercise.application.ExerciseService;
 import com.raisedeveloper.server.domain.exercise.domain.ExerciseSession;
@@ -39,6 +41,7 @@ public class PushAlarmScheduler {
 	private EntityManagerFactory entityManagerFactory;
 
 	@Scheduled(cron = "0 */1 * * * *")
+	@SchedulerLock(name = "PushAlarmScheduler.processAlarms", lockAtMostFor = "PT5M")
 	public void processAlarms() {
 		SessionFactory sessionFactory = entityManagerFactory.unwrap(SessionFactory.class);
 		Statistics statistics = sessionFactory.getStatistics();
