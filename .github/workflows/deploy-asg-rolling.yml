@@ -218,7 +218,7 @@ jobs:
           # - Production (2대): 50% (1대는 죽이고 1대는 살림 -> 롤링)
           # - Staging (1대): 0% (새거 띄우고 옛날거 죽이거나, 잠시 다운타임 허용)
           if [ "${{ inputs.environment }}" == "production" ]; then
-            MIN_HEALTHY=50
+            MIN_HEALTHY=100
           else
             MIN_HEALTHY=0 # 1대일 경우 100%를 유지하려면 Max Capacity가 2여야 함
           fi
