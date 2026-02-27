@@ -25,4 +25,16 @@ public class ExerciseSessionEventPublisher {
 			event
 		);
 	}
+
+	public void publishRewardApplied(ExerciseSessionRewardAppliedEvent event) {
+		outboxEventStore.store(
+			event.eventId(),
+			OutboxAggregateType.USER_CHARACTER,
+			event.userId().toString(),
+			ExerciseKafkaTopics.SESSION_REWARD_APPLIED,
+			OutboxEventType.EXERCISE_SESSION_REWARD_APPLIED,
+			String.valueOf(event.userId()),
+			event
+		);
+	}
 }
