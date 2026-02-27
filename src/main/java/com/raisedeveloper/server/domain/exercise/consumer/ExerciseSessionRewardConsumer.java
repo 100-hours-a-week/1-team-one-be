@@ -1,7 +1,6 @@
 package com.raisedeveloper.server.domain.exercise.consumer;
 
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.UUID;
 
 import org.springframework.kafka.annotation.KafkaListener;
@@ -47,7 +46,8 @@ public class ExerciseSessionRewardConsumer {
 
 		AppliedSessionReward reward = sessionRewardService.applyForCompletedSession(
 			event.userId(),
-			event.completedCount()
+			event.completedCount(),
+			event.firstCompletionToday()
 		);
 		exerciseSessionEventPublisher.publishRewardApplied(new ExerciseSessionRewardAppliedEvent(
 			UUID.randomUUID().toString(),

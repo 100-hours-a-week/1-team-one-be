@@ -13,12 +13,11 @@ import lombok.RequiredArgsConstructor;
 @Transactional(readOnly = true)
 public class SessionRewardService {
 
-	private final ExerciseSessionService exerciseSessionService;
 	private final UserCharacterService userCharacterService;
 
 	@Transactional
-	public AppliedSessionReward applyForCompletedSession(Long userId, long completedCount) {
-		boolean hadCompletedTodayBefore = exerciseSessionService.hasCompletedSessionToday(userId);
+	public AppliedSessionReward applyForCompletedSession(Long userId, long completedCount,
+		boolean firstCompletionToday) {
 		UserCharacter character = userCharacterService.getByUserIdOrThrow(userId);
 		int previousExp = character.getExp();
 		int previousStatusScore = character.getStatusScore();
@@ -28,7 +27,7 @@ public class SessionRewardService {
 
 		character.addExp(earnedExp);
 		character.addStatusScore(earnedStatusScore);
-		if (!hadCompletedTodayBefore) {
+		if (firstCompletionToday) {
 			character.incrementStreak();
 		}
 

@@ -38,8 +38,14 @@ public class ExerciseSessionFacade {
 		ExerciseSessionUpdateRequest request
 	) {
 		ExerciseSession session = exerciseSessionService.getSessionForUpdate(userId, sessionId);
+		boolean hadCompletedTodayBefore = exerciseSessionService.hasCompletedSessionToday(userId);
 		long completedCount = updateSessionData(session, request);
-		AppliedSessionReward reward = sessionRewardService.applyForCompletedSession(userId, completedCount);
+		boolean firstCompletionToday = completedCount > 0 && !hadCompletedTodayBefore;
+		AppliedSessionReward reward = sessionRewardService.applyForCompletedSession(
+			userId,
+			completedCount,
+			firstCompletionToday
+		);
 
 		int earnedExp = reward.earnedExp();
 		int earnedStatusScore = reward.earnedStatusScore();
