@@ -38,7 +38,7 @@ public class OutboxEvent extends CreatedUpdatedEntity {
 	@Column(nullable = false, length = 200)
 	private String topic;
 
-	@Column(length = 150)
+	@Column(nullable = false, length = 150)
 	private String eventType;
 
 	@Column(nullable = false, length = 100)
