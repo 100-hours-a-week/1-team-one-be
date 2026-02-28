@@ -46,7 +46,7 @@ public class UserService {
 
 	@Transactional
 	public UserMeResponse getMe(Long userId) {
-		User user = userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
+		User user = userRepository.findById(userId).orElseThrow(
 			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
 		);
 		UserProfile profile = userProfileRepository.findByUserId(userId).orElseThrow(
@@ -60,7 +60,7 @@ public class UserService {
 
 	@Transactional
 	public UserMeResponse getUserProfile(Long userId) {
-		User user = userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
+		User user = userRepository.findById(userId).orElseThrow(
 			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
 		);
 		UserProfile profile = userProfileRepository.findByUserId(userId).orElseThrow(
@@ -74,7 +74,7 @@ public class UserService {
 
 	@Transactional
 	public UserProfileResponse updateProfileImage(Long userId, String imagePath) {
-		User user = userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
+		User user = userRepository.findById(userId).orElseThrow(
 			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
 		);
 		UserProfile profile = userProfileRepository.findByUserId(user.getId()).orElseThrow(
@@ -86,7 +86,7 @@ public class UserService {
 
 	@Transactional
 	public UserProfileResponse updateNickname(Long userId, String nickname) {
-		User user = userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
+		User user = userRepository.findById(userId).orElseThrow(
 			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
 		);
 		UserProfile profile = userProfileRepository.findByUserId(user.getId()).orElseThrow(
@@ -104,7 +104,7 @@ public class UserService {
 
 	@Transactional
 	public void withdraw(Long userId) {
-		User user = userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
+		User user = userRepository.findById(userId).orElseThrow(
 			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
 		);
 		userRepository.delete(user);
@@ -113,7 +113,7 @@ public class UserService {
 
 	@Transactional
 	public UserMeAlarmSettingsResponse getAlarmSettings(Long userId) {
-		userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
+		userRepository.findById(userId).orElseThrow(
 			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
 		);
 
@@ -126,7 +126,7 @@ public class UserService {
 
 	@Transactional
 	public AlarmSettingsDndResponse getAlarmDnd(Long userId) {
-		userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
+		userRepository.findById(userId).orElseThrow(
 			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
 		);
 
@@ -139,7 +139,7 @@ public class UserService {
 
 	@Transactional
 	public void setAlarmSettings(Long userId, AlarmSettingsRequest request) {
-		User user = userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
+		User user = userRepository.findById(userId).orElseThrow(
 			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
 		);
 
@@ -169,7 +169,7 @@ public class UserService {
 
 	@Transactional
 	public void updateAlarmDnd(Long userId, AlarmSettingsDndRequest request) {
-		User user = userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
+		User user = userRepository.findById(userId).orElseThrow(
 			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
 		);
 
@@ -184,7 +184,7 @@ public class UserService {
 
 	@Transactional
 	public CharacterCreateResponse createCharacter(Long userId, CharacterCreateRequest request) {
-		User user = userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
+		User user = userRepository.findById(userId).orElseThrow(
 			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
 		);
 
@@ -197,7 +197,7 @@ public class UserService {
 	}
 
 	public OnboardingResponse checkUserOnboardingCompleted(Long userId) {
-		User user = userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
+		User user = userRepository.findById(userId).orElseThrow(
 			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
 		);
 
@@ -206,7 +206,7 @@ public class UserService {
 
 	@Transactional
 	public void markOnboardingCompleted(Long userId) {
-		User user = userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
+		User user = userRepository.findById(userId).orElseThrow(
 			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
 		);
 

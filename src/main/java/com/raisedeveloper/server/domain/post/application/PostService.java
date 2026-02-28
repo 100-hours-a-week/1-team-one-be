@@ -73,7 +73,7 @@ public class PostService {
 
 	@Transactional
 	public PostCreateResponse createPost(Long userId, PostCreateRequest request) {
-		User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+		User user = userRepository.findById(userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 		List<String> imagePaths = normalizeList(request.images());
 
@@ -198,7 +198,7 @@ public class PostService {
 	public PostListResponse getPosts(Long authorId, List<String> tagNames, Integer limit, String cursor,
 		Long viewerUserId) {
 		if (authorId != null) {
-			userRepository.findByIdAndDeletedAtIsNull(authorId)
+			userRepository.findById(authorId)
 				.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 		}
 
@@ -219,7 +219,7 @@ public class PostService {
 	public PostMetaListResponse getPostMetaList(Long authorId, List<String> tagNames, Integer limit, String cursor,
 		Long viewerUserId) {
 		if (authorId != null) {
-			userRepository.findByIdAndDeletedAtIsNull(authorId)
+			userRepository.findById(authorId)
 				.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 		}
 
@@ -241,7 +241,7 @@ public class PostService {
 	public PostLikeResponse togglePostLike(Long userId, Long postId, boolean likeRequested) {
 		postRepository.findById(postId)
 			.orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
-		userRepository.findByIdAndDeletedAtIsNull(userId)
+		userRepository.findById(userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
 		if (likeRequested) {
