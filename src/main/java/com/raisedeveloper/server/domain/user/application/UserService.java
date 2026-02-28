@@ -107,7 +107,7 @@ public class UserService {
 		User user = userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
 			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
 		);
-		user.softDelete(LocalDateTime.now());
+		userRepository.delete(user);
 		authService.logoutAll(userId);
 	}
 
