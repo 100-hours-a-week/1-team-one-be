@@ -22,6 +22,8 @@ import com.raisedeveloper.server.domain.post.dto.PostDetailResponse;
 import com.raisedeveloper.server.domain.post.dto.PostLikeRequest;
 import com.raisedeveloper.server.domain.post.dto.PostLikeResponse;
 import com.raisedeveloper.server.domain.post.dto.PostListResponse;
+import com.raisedeveloper.server.domain.post.dto.PostMetaDetailResponse;
+import com.raisedeveloper.server.domain.post.dto.PostMetaListResponse;
 import com.raisedeveloper.server.domain.post.dto.PostUpdateRequest;
 import com.raisedeveloper.server.global.response.ApiResponse;
 import com.raisedeveloper.server.global.security.currentuser.CurrentUser;
@@ -84,6 +86,27 @@ public class PostController {
 	) {
 		PostDetailResponse response = postService.getPostDetail(postId, userId);
 		return ApiResponse.of("GET_POST_DETAIL_SUCCESS", response);
+	}
+
+	@GetMapping("/{postId}/meta")
+	public ApiResponse<PostMetaDetailResponse> getPostMeta(
+		@CurrentUser(required = false) Long userId,
+		@PathVariable Long postId
+	) {
+		PostMetaDetailResponse response = postService.getPostMeta(postId, userId);
+		return ApiResponse.of("GET_POST_META_SUCCESS", response);
+	}
+
+	@GetMapping("/meta")
+	public ApiResponse<PostMetaListResponse> getPostMetaList(
+		@CurrentUser(required = false) Long userId,
+		@RequestParam(value = "limit", required = false) Integer limit,
+		@RequestParam(value = "cursor", required = false) String cursor,
+		@RequestParam(value = "author-id", required = false) Long authorId,
+		@RequestParam(value = "tag", required = false) List<String> tagNames
+	) {
+		PostMetaListResponse response = postService.getPostMetaList(authorId, tagNames, limit, cursor, userId);
+		return ApiResponse.of("GET_POST_META_LIST_SUCCESS", response);
 	}
 
 	@PostMapping("/{postId}/like")

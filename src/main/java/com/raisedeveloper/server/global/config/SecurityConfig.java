@@ -57,6 +57,9 @@ public class SecurityConfig {
 			path.matcher("/images/upload-url/profile"),
 			path.matcher("/routines/callback")
 		);
+		var permitAllMatchers = new java.util.ArrayList<>(optionalAuthMatchers);
+		permitAllMatchers.add(new RegexRequestMatcher("^/posts/\\d+/meta$", "GET"));
+		permitAllMatchers.add(path.matcher(HttpMethod.GET, "/posts/meta"));
 		RequestMatcher optionalAuthMatcher = new OrRequestMatcher(optionalAuthMatchers);
 
 		JwtAuthenticationFilter jwtAuthFilter = new JwtAuthenticationFilter(jwtTokenProvider, optionalAuthMatcher);
@@ -72,7 +75,7 @@ public class SecurityConfig {
 			)
 
 			.authorizeHttpRequests(auth -> {
-				optionalAuthMatchers.forEach(matcher -> auth.requestMatchers(matcher).permitAll());
+				permitAllMatchers.forEach(matcher -> auth.requestMatchers(matcher).permitAll());
 				auth
 				.requestMatchers("/admin/**").hasRole("ADMIN")
 					.anyRequest().authenticated();
