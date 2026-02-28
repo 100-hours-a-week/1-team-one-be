@@ -156,7 +156,7 @@ public class RoutineService {
 					exercise,
 					stepDto.targetReps() != null ? stepDto.targetReps().shortValue() : null,
 					stepDto.durationTime() != null ? stepDto.durationTime().shortValue() : null,
-					EYES.equals(stepDto.type()) ? 0 : stepDto.limitTime().shortValue(),
+					stepDto.limitTime().shortValue(),
 					stepDto.stepOrder().shortValue()
 				);
 				routineStepRepository.save(step);
