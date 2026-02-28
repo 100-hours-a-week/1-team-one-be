@@ -1,5 +1,8 @@
 package com.raisedeveloper.server.domain.user.domain;
 
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
+
 import com.raisedeveloper.server.domain.common.domain.SoftDeleteEntity;
 import com.raisedeveloper.server.domain.common.enums.Role;
 
@@ -19,6 +22,12 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "users")
+@SQLDelete(sql = """
+	UPDATE users
+	SET deleted_at = NOW(), updated_at = NOW()
+	WHERE id = ? AND deleted_at IS NULL
+	""")
+@SQLRestriction("deleted_at IS NULL")
 public class User extends SoftDeleteEntity {
 
 	@Id

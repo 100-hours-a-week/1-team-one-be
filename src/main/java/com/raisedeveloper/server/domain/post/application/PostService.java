@@ -1,6 +1,5 @@
 package com.raisedeveloper.server.domain.post.application;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -11,13 +10,13 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.raisedeveloper.server.domain.post.domain.Post;
 import com.raisedeveloper.server.domain.post.domain.PostImage;
-import com.raisedeveloper.server.domain.post.domain.PostLikeOutbox;
 import com.raisedeveloper.server.domain.post.domain.PostTag;
 import com.raisedeveloper.server.domain.post.domain.Tag;
 import com.raisedeveloper.server.domain.post.dto.PostAuthor;
@@ -31,7 +30,6 @@ import com.raisedeveloper.server.domain.post.dto.PostListResponse;
 import com.raisedeveloper.server.domain.post.dto.PostTagInfo;
 import com.raisedeveloper.server.domain.post.dto.PostUpdateRequest;
 import com.raisedeveloper.server.domain.post.infra.PostImageRepository;
-import com.raisedeveloper.server.domain.post.infra.PostLikeOutboxRepository;
 import com.raisedeveloper.server.domain.post.infra.PostLikeRepository;
 import com.raisedeveloper.server.domain.post.infra.PostRepository;
 import com.raisedeveloper.server.domain.post.infra.PostTagRepository;
@@ -63,11 +61,12 @@ public class PostService {
 	private final PostRepository postRepository;
 	private final PostImageRepository postImageRepository;
 	private final PostLikeRepository postLikeRepository;
-	private final PostLikeOutboxRepository postLikeOutboxRepository;
 	private final TagRepository tagRepository;
 	private final PostTagRepository postTagRepository;
 	private final CursorService cursorService;
 	private final PostMapper postMapper;
+	private final LikeCountQueryService likeCountQueryService;
+	private final ApplicationEventPublisher eventPublisher;
 
 	@Transactional
 	public PostCreateResponse createPost(Long userId, PostCreateRequest request) {
@@ -124,7 +123,7 @@ public class PostService {
 
 	@Transactional
 	public void updatePost(Long userId, Long postId, PostUpdateRequest request) {
-		Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
+		Post post = postRepository.findById(postId)
 			.orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 		validateAuthor(post, userId);
 
@@ -138,17 +137,17 @@ public class PostService {
 
 	@Transactional
 	public void deletePost(Long userId, Long postId) {
-		Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
+		Post post = postRepository.findById(postId)
 			.orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 		validateAuthor(post, userId);
 
-		post.softDelete(LocalDateTime.now());
+		postRepository.delete(post);
 		postImageRepository.deleteAllByPostId(post.getId());
 		postTagRepository.deleteAllByPostId(post.getId());
 	}
 
 	public PostDetailResponse getPostDetail(Long postId, Long viewerUserId) {
-		Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
+		Post post = postRepository.findById(postId)
 			.orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 
 		User author = post.getUser();
@@ -170,9 +169,10 @@ public class PostService {
 		boolean isAuthor = viewerUserId != null && viewerUserId.equals(author.getId());
 
 		boolean isLiked = viewerUserId != null && postLikeRepository.existsByPostIdAndUserId(postId, viewerUserId);
+		int likeCount = likeCountQueryService.getLikeCount(postId);
 
 		PostAuthor postAuthor = postMapper.toPostAuthor(author.getId(), profile, character);
-		PostDetail detail = postMapper.toPostDetail(post, isAuthor, postAuthor, images, tags, isLiked);
+		PostDetail detail = postMapper.toPostDetail(post, isAuthor, postAuthor, images, tags, isLiked, likeCount);
 
 		return new PostDetailResponse(detail);
 	}
@@ -200,7 +200,7 @@ public class PostService {
 
 	@Transactional
 	public PostLikeResponse togglePostLike(Long userId, Long postId, boolean likeRequested) {
-		postRepository.findByIdAndDeletedAtIsNull(postId)
+		postRepository.findById(postId)
 			.orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 		userRepository.findByIdAndDeletedAtIsNull(userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
@@ -208,12 +208,12 @@ public class PostService {
 		if (likeRequested) {
 			int inserted = postLikeRepository.insertIgnoreByPostIdAndUserId(postId, userId);
 			if (inserted > 0) {
-				postLikeOutboxRepository.save(new PostLikeOutbox(postId, 1));
+				eventPublisher.publishEvent(new PostLikeChangedEvent(postId, 1));
 			}
 		} else {
 			long deleted = postLikeRepository.deleteByPostIdAndUserId(postId, userId);
 			if (deleted > 0) {
-				postLikeOutboxRepository.save(new PostLikeOutbox(postId, -1));
+				eventPublisher.publishEvent(new PostLikeChangedEvent(postId, -1));
 			}
 		}
 
@@ -387,14 +387,15 @@ public class PostService {
 		Map<Long, List<PostTagInfo>> tagsByPostId = loadTagsByPostId(posts);
 
 		Set<Long> likedPostIds;
+		List<Long> postIds = posts.stream()
+			.map(Post::getId)
+			.toList();
 		if (viewerUserId != null) {
-			List<Long> postIds = posts.stream()
-				.map(Post::getId)
-				.toList();
 			likedPostIds = Set.copyOf(postLikeRepository.findPostIdsByUserIdAndPostIdIn(viewerUserId, postIds));
 		} else {
 			likedPostIds = Set.of();
 		}
+		Map<Long, Integer> likeCountByPostId = likeCountQueryService.getLikeCounts(postIds);
 
 		return posts.stream()
 			.map(post -> {
@@ -403,7 +404,8 @@ public class PostService {
 					post,
 					authorByUserId.get(post.getUser().getId()),
 					tagsByPostId.getOrDefault(post.getId(), List.of()),
-					isLiked
+					isLiked,
+					likeCountByPostId.getOrDefault(post.getId(), 0)
 				);
 			})
 			.toList();

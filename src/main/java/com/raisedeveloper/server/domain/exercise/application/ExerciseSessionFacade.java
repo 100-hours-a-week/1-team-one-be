@@ -14,12 +14,7 @@ import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionUpdateReques
 import com.raisedeveloper.server.domain.exercise.infra.ExerciseSessionReportRepository;
 import com.raisedeveloper.server.domain.exercise.mapper.ExerciseSessionMapper;
 import com.raisedeveloper.server.domain.notification.application.NotificationService;
-import com.raisedeveloper.server.domain.user.application.SessionRewardResult;
-import com.raisedeveloper.server.domain.user.application.UserCharacterService;
 import com.raisedeveloper.server.domain.user.domain.UserCharacter;
-import com.raisedeveloper.server.domain.user.infra.UserCharacterRepository;
-import com.raisedeveloper.server.global.exception.CustomException;
-import com.raisedeveloper.server.global.exception.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,10 +25,9 @@ import lombok.extern.slf4j.Slf4j;
 public class ExerciseSessionFacade {
 
 	private final ExerciseSessionService exerciseSessionService;
-	private final UserCharacterService userCharacterService;
+	private final SessionRewardService sessionRewardService;
 	private final NotificationService notificationService;
 	private final ExerciseSessionReportRepository exerciseSessionReportRepository;
-	private final UserCharacterRepository userCharacterRepository;
 	private final ExerciseSessionMapper exerciseSessionMapper;
 
 	@Transactional
@@ -42,19 +36,21 @@ public class ExerciseSessionFacade {
 		Long sessionId,
 		ExerciseSessionUpdateRequest request
 	) {
-		SessionCompletionContext completion = completeSession(userId, sessionId, request);
+		ExerciseSession session = exerciseSessionService.getSessionForUpdate(userId, sessionId);
+		long completedCount = updateSessionData(session, request);
+		AppliedSessionReward reward = sessionRewardService.applyForCompletedSession(userId, completedCount);
 
-		int earnedExp = completion.rewardResult().earnedExp();
-		int earnedStatusScore = completion.rewardResult().earnedStatusScore();
-		CharacterDto characterDto = exerciseSessionMapper.toCharacterDto(completion.rewardResult().character());
+		int earnedExp = reward.earnedExp();
+		int earnedStatusScore = reward.earnedStatusScore();
+		CharacterDto characterDto = exerciseSessionMapper.toCharacterDto(reward.character());
 
 		log.info("Exercise session completed: sessionId={}, userId={}, earnedExp={}, earnedStatusScore={}",
 			sessionId, userId, earnedExp, earnedStatusScore);
 
-		if (completion.completedCount() == 0) {
-			notificationService.createStretchingFailed(completion.session().getUser());
+		if (completedCount == 0) {
+			notificationService.createStretchingFailed(session.getUser());
 		} else {
-			notificationService.createStretchingSuccess(completion.session().getUser(), earnedExp);
+			notificationService.createStretchingSuccess(session.getUser(), earnedExp);
 		}
 
 		return exerciseSessionMapper.toCompleteResponse(
@@ -72,79 +68,49 @@ public class ExerciseSessionFacade {
 		Long sessionId,
 		ExerciseSessionUpdateRequest request
 	) {
-		SessionCompletionContext completion = completeSession(userId, sessionId, request);
+		ExerciseSession session = exerciseSessionService.getSessionForUpdate(userId, sessionId);
+		long completedCount = updateSessionData(session, request);
+		AppliedSessionReward reward = sessionRewardService.applyForCompletedSession(userId, completedCount);
 
-		UserCharacter character = completion.rewardResult().character();
+		UserCharacter character = reward.character();
 		ExerciseSessionReport exerciseSessionReport = exerciseSessionReportRepository.save(
 			new ExerciseSessionReport(
-				completion.session(),
-				completion.session().getUser(),
+				session,
+				session.getUser(),
 				character.getLevel(),
-				completion.previousExp(),
-				completion.rewardResult().earnedExp(),
+				reward.previousExp(),
+				reward.earnedExp(),
 				character.getStreak(),
-				completion.previousStatusScore(),
-				completion.rewardResult().earnedStatusScore()
+				reward.previousStatusScore(),
+				reward.earnedStatusScore()
 			)
 		);
 
 		log.info("Exercise session v2 completed and report created: sessionId={}, userId={}, reportId={}",
 			sessionId, userId, exerciseSessionReport.getId());
 
-		if (completion.completedCount() == 0) {
-			notificationService.createStretchingFailed(completion.session().getUser());
+		if (completedCount == 0) {
+			notificationService.createStretchingFailed(session.getUser());
 		} else {
 			notificationService.createStretchingSuccess(
-				completion.session().getUser(),
-				completion.rewardResult().earnedExp()
+				session.getUser(), reward.earnedExp()
 			);
 		}
 
 		return new ExerciseSessionReportCreateResponse(
-			completion.session().getId(),
+			session.getId(),
 			exerciseSessionReport.getId(),
-			completion.session().getRoutine().getId(),
-			completion.session().getStartAt(),
-			completion.session().getEndAt(),
-			completion.session().getIsRoutineCompleted()
+			session.getRoutine().getId(),
+			session.getStartAt(),
+			session.getEndAt(),
+			session.getIsRoutineCompleted()
 		);
 	}
 
-	private SessionCompletionContext completeSession(
-		Long userId,
-		Long sessionId,
+	private long updateSessionData(
+		ExerciseSession session,
 		ExerciseSessionUpdateRequest request
 	) {
-		ExerciseSession session = exerciseSessionService.getSessionForUpdate(userId, sessionId);
-		long completedCount = exerciseSessionService.updateSessionAndResults(session, request);
-		boolean hasCompletedToday = exerciseSessionService.hasCompletedSessionToday(userId);
-
-		UserCharacter beforeReward = userCharacterRepository.findByUserId(userId)
-			.orElseThrow(() -> new CustomException(ErrorCode.CHARACTER_NOT_SET));
-		int previousExp = beforeReward.getExp();
-		int previousStatusScore = beforeReward.getStatusScore();
-
-		SessionRewardResult rewardResult = userCharacterService.applySessionReward(
-			userId,
-			completedCount,
-			hasCompletedToday
-		);
-
-		return new SessionCompletionContext(
-			session,
-			completedCount,
-			previousExp,
-			previousStatusScore,
-			rewardResult
-		);
-	}
-
-	private record SessionCompletionContext(
-		ExerciseSession session,
-		long completedCount,
-		int previousExp,
-		int previousStatusScore,
-		SessionRewardResult rewardResult
-	) {
+		return exerciseSessionService.updateSessionAndResults(session, request);
 	}
 }

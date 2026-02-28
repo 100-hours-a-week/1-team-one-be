@@ -11,7 +11,15 @@ import com.raisedeveloper.server.domain.post.domain.PostLike;
 
 public interface PostLikeRepository extends JpaRepository<PostLike, Long> {
 
+	interface PostLikeCountProjection {
+		Long getPostId();
+
+		Long getLikeCount();
+	}
+
 	boolean existsByPostIdAndUserId(Long postId, Long userId);
+
+	long countByPostId(Long postId);
 
 	@Modifying
 	@Query(value = """
@@ -24,5 +32,13 @@ public interface PostLikeRepository extends JpaRepository<PostLike, Long> {
 
 	@Query("select pl.post.id from PostLike pl where pl.user.id = :userId and pl.post.id in :postIds")
 	List<Long> findPostIdsByUserIdAndPostIdIn(@Param("userId") Long userId, @Param("postIds") List<Long> postIds);
+
+	@Query("""
+		select pl.post.id as postId, count(pl.id) as likeCount
+		from PostLike pl
+		where pl.post.id in :postIds
+		group by pl.post.id
+		""")
+	List<PostLikeCountProjection> countLikeCountsByPostIds(@Param("postIds") List<Long> postIds);
 
 }
