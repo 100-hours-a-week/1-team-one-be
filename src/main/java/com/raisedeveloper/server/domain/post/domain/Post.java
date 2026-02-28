@@ -36,9 +36,6 @@ public class Post extends SoftDeleteEntity {
 	@Column(nullable = false, length = 500)
 	private String content;
 
-	@Column(nullable = false)
-	private int likeCount;
-
 	private String thumbnailImagePath;
 
 	public Post(User user, String title, String content, String thumbnailImagePath) {
@@ -46,7 +43,6 @@ public class Post extends SoftDeleteEntity {
 		this.title = title;
 		this.content = content;
 		this.thumbnailImagePath = thumbnailImagePath;
-		this.likeCount = 0;
 	}
 
 	public void update(String title, String content, String thumbnailImagePath) {
