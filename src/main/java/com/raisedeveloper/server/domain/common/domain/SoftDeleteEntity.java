@@ -1,7 +1,6 @@
 package com.raisedeveloper.server.domain.common.domain;
 
 import java.time.LocalDateTime;
-import java.util.Objects;
 
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -27,15 +26,5 @@ public abstract class SoftDeleteEntity {
 
 	@Column(name = "deleted_at")
 	private LocalDateTime deletedAt;
-
-	public boolean isDeleted() {
-		return deletedAt != null;
-	}
-
-	public void softDelete(LocalDateTime now) {
-		if (deletedAt == null) {
-			this.deletedAt = Objects.requireNonNull(now);
-		}
-	}
 }
 

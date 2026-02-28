@@ -2,6 +2,8 @@ package com.raisedeveloper.server.domain.post.domain;
 
 import com.raisedeveloper.server.domain.common.domain.SoftDeleteEntity;
 import com.raisedeveloper.server.domain.user.domain.User;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -20,6 +22,12 @@ import lombok.NoArgsConstructor;
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "posts")
+@SQLDelete(sql = """
+	UPDATE posts
+	SET deleted_at = NOW(), updated_at = NOW()
+	WHERE id = ? AND deleted_at IS NULL
+	""")
+@SQLRestriction("deleted_at IS NULL")
 public class Post extends SoftDeleteEntity {
 
 	@Id
