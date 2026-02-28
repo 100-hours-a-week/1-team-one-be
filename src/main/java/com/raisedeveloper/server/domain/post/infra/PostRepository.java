@@ -6,7 +6,6 @@ import java.util.Optional;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -119,16 +118,4 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 		@Param("id") Long id,
 		Pageable pageable
 	);
-
-	@Modifying
-	@Query("""
-		UPDATE Post p
-		SET p.likeCount = case
-			when (p.likeCount + :delta) < 0 then 0
-			else (p.likeCount + :delta)
-		END
-		WHERE p.id = :postId
-			AND p.deletedAt IS NULL
-		""")
-	void updateLikeCountDelta(@Param("postId") Long postId, @Param("delta") long delta);
 }
