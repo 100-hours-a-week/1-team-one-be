@@ -47,7 +47,7 @@ public class RoutineService {
 	private final ExerciseRepository exerciseRepository;
 
 	public RoutinePlanResponse getMyRoutine(Long userId) {
-		userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
+		userRepository.findById(userId).orElseThrow(
 			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
 		);
 

@@ -65,7 +65,7 @@ public class SurveyService {
 
 	@Transactional
 	public SurveySubmissionResponse submitSurvey(Long userId, SurveySubmissionRequest request) {
-		User user = userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
+		User user = userRepository.findById(userId).orElseThrow(
 			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
 		);
 		Survey survey = surveyRepository.findById(request.surveyId()).orElseThrow(
