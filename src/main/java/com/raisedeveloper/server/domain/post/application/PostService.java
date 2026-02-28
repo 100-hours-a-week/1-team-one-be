@@ -1,6 +1,5 @@
 package com.raisedeveloper.server.domain.post.application;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -124,7 +123,7 @@ public class PostService {
 
 	@Transactional
 	public void updatePost(Long userId, Long postId, PostUpdateRequest request) {
-		Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
+		Post post = postRepository.findById(postId)
 			.orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 		validateAuthor(post, userId);
 
@@ -138,17 +137,17 @@ public class PostService {
 
 	@Transactional
 	public void deletePost(Long userId, Long postId) {
-		Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
+		Post post = postRepository.findById(postId)
 			.orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 		validateAuthor(post, userId);
 
-		post.softDelete(LocalDateTime.now());
+		postRepository.delete(post);
 		postImageRepository.deleteAllByPostId(post.getId());
 		postTagRepository.deleteAllByPostId(post.getId());
 	}
 
 	public PostDetailResponse getPostDetail(Long postId, Long viewerUserId) {
-		Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
+		Post post = postRepository.findById(postId)
 			.orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 
 		User author = post.getUser();
@@ -201,7 +200,7 @@ public class PostService {
 
 	@Transactional
 	public PostLikeResponse togglePostLike(Long userId, Long postId, boolean likeRequested) {
-		postRepository.findByIdAndDeletedAtIsNull(postId)
+		postRepository.findById(postId)
 			.orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 		userRepository.findByIdAndDeletedAtIsNull(userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
