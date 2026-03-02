@@ -303,18 +303,41 @@ public class PostService {
 		replacePostImages(post, imagePaths);
 	}
 
-	private void replacePostTags(Post post, List<String> tagNamesRaw) {
-		List<String> tagNames = normalizeDistinctList(tagNamesRaw);
-		postTagRepository.deleteAllByPostId(post.getId());
-		if (tagNames.isEmpty()) {
+	private void updatePostTagsIfChanged(Post post, List<String> tagNamesRaw) {
+		List<String> desiredTagNames = normalizeDistinctList(tagNamesRaw);
+		List<Tag> existingTags = postTagRepository.findTagsByPostId(post.getId());
+
+		Map<String, Tag> existingTagByName = existingTags.stream()
+			.collect(Collectors.toMap(Tag::getName, tag -> tag));
+		Set<String> existingTagNames = existingTagByName.keySet();
+		Set<String> desiredTagNameSet = Set.copyOf(desiredTagNames);
+
+		if (existingTagNames.equals(desiredTagNameSet)) {
 			return;
 		}
 
-		List<Tag> existingTags = tagRepository.findByNameIn(tagNames);
-		Map<String, Tag> tagByName = existingTags.stream()
+		List<Long> tagIdsToRemove = existingTagNames.stream()
+			.filter(name -> !desiredTagNameSet.contains(name))
+			.map(existingTagByName::get)
+			.filter(Objects::nonNull)
+			.map(Tag::getId)
+			.toList();
+		if (!tagIdsToRemove.isEmpty()) {
+			postTagRepository.deleteByPostIdAndTagIdIn(post.getId(), tagIdsToRemove);
+		}
+
+		List<String> tagNamesToAdd = desiredTagNames.stream()
+			.filter(name -> !existingTagNames.contains(name))
+			.toList();
+		if (tagNamesToAdd.isEmpty()) {
+			return;
+		}
+
+		List<Tag> persistedTags = tagRepository.findByNameIn(tagNamesToAdd);
+		Map<String, Tag> tagByName = persistedTags.stream()
 			.collect(Collectors.toMap(Tag::getName, tag -> tag));
 
-		List<Tag> missingTags = tagNames.stream()
+		List<Tag> missingTags = tagNamesToAdd.stream()
 			.filter(name -> !tagByName.containsKey(name))
 			.map(Tag::new)
 			.toList();
@@ -323,23 +346,14 @@ public class PostService {
 			savedTags.forEach(tag -> tagByName.put(tag.getName(), tag));
 		}
 
-		List<PostTag> postTags = tagNames.stream()
+		List<PostTag> postTagsToAdd = tagNamesToAdd.stream()
 			.map(tagByName::get)
 			.filter(Objects::nonNull)
 			.map(tag -> new PostTag(post, tag))
 			.toList();
-		if (!postTags.isEmpty()) {
-			postTagRepository.saveAll(postTags);
+		if (!postTagsToAdd.isEmpty()) {
+			postTagRepository.saveAll(postTagsToAdd);
 		}
-	}
-
-	private void updatePostTagsIfChanged(Post post, List<String> tagNamesRaw) {
-		List<String> tagNames = normalizeDistinctList(tagNamesRaw);
-		Set<String> existingTagNames = Set.copyOf(postTagRepository.findTagNamesByPostId(post.getId()));
-		if (existingTagNames.equals(Set.copyOf(tagNames))) {
-			return;
-		}
-		replacePostTags(post, tagNames);
 	}
 
 	private List<String> normalizeDistinctList(List<String> values) {
