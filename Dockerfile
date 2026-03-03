@@ -3,6 +3,9 @@ FROM eclipse-temurin:25-jre-alpine
 
 WORKDIR /app
 
+ADD https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar /app/opentelemetry-javaagent.jar
+RUN chmod 644 /app/opentelemetry-javaagent.jar
+
 # JAR 파일 복사
 COPY backend-app.jar app.jar
 
@@ -13,4 +16,4 @@ USER nobody
 EXPOSE 8080
 
 # 애플리케이션 실행
-CMD ["java", "-Duser.timezone=Asia/Seoul", "-jar", "app.jar"]
+CMD ["java", "-javaagent:/app/opentelemetry-javaagent.jar", "-Duser.timezone=Asia/Seoul", "-jar", "app.jar"]

@@ -161,6 +161,11 @@ jobs:
 
               "else",
               "  echo \"Health Check Failed! Initiating Rollback...\"",
+              "  # EC2 내부에 로그 파일로 오류백업",
+              "  mkdir -p /home/ubuntu/app/backend",
+              "  docker compose logs backend > /home/ubuntu/app/backend/deploy_failed_$(date +%s).log",
+              "  echo \"=== Error Logs ===\"",
+              "  docker compose logs backend --tail 50",
               
               "  # 롤백 실행: 백업해둔 이미지가 있는지 확인",
               "  if docker image inspect backend:rollback-backup > /dev/null 2>&1; then",
@@ -175,8 +180,6 @@ jobs:
               "  fi",
               
               "  # 롤백을 했더라도 배포 자체는 실패한 것이므로 exit 1",
-              "  echo \"=== Error Logs ===\"",
-              "  docker compose logs backend --tail 50",
               "  exit 1",
               "fi"
             ]' \
