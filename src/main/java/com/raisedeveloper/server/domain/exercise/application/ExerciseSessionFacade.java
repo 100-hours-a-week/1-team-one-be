@@ -1,20 +1,21 @@
 package com.raisedeveloper.server.domain.exercise.application;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.raisedeveloper.server.domain.exercise.domain.ExerciseSession;
-import com.raisedeveloper.server.domain.exercise.domain.ExerciseSessionReport;
 import com.raisedeveloper.server.domain.exercise.dto.CharacterDto;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionCompleteResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionReportCreateResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionUpdateRequest;
-import com.raisedeveloper.server.domain.exercise.infra.ExerciseSessionReportRepository;
+import com.raisedeveloper.server.domain.exercise.event.ExerciseSessionCompletedEvent;
+import com.raisedeveloper.server.domain.exercise.event.ExerciseSessionEventPublisher;
 import com.raisedeveloper.server.domain.exercise.mapper.ExerciseSessionMapper;
 import com.raisedeveloper.server.domain.notification.application.NotificationService;
-import com.raisedeveloper.server.domain.user.domain.UserCharacter;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,8 +28,8 @@ public class ExerciseSessionFacade {
 	private final ExerciseSessionService exerciseSessionService;
 	private final SessionRewardService sessionRewardService;
 	private final NotificationService notificationService;
-	private final ExerciseSessionReportRepository exerciseSessionReportRepository;
 	private final ExerciseSessionMapper exerciseSessionMapper;
+	private final ExerciseSessionEventPublisher exerciseSessionEventPublisher;
 
 	@Transactional
 	public ExerciseSessionCompleteResponse completeExerciseSession(
@@ -37,8 +38,14 @@ public class ExerciseSessionFacade {
 		ExerciseSessionUpdateRequest request
 	) {
 		ExerciseSession session = exerciseSessionService.getSessionForUpdate(userId, sessionId);
+		boolean hadCompletedTodayBefore = exerciseSessionService.hasCompletedSessionToday(userId);
 		long completedCount = updateSessionData(session, request);
-		AppliedSessionReward reward = sessionRewardService.applyForCompletedSession(userId, completedCount);
+		boolean firstCompletionToday = completedCount > 0 && !hadCompletedTodayBefore;
+		AppliedSessionReward reward = sessionRewardService.applyForCompletedSession(
+			userId,
+			completedCount,
+			firstCompletionToday
+		);
 
 		int earnedExp = reward.earnedExp();
 		int earnedStatusScore = reward.earnedStatusScore();
@@ -69,37 +76,30 @@ public class ExerciseSessionFacade {
 		ExerciseSessionUpdateRequest request
 	) {
 		ExerciseSession session = exerciseSessionService.getSessionForUpdate(userId, sessionId);
+		boolean hadCompletedTodayBefore = exerciseSessionService.hasCompletedSessionToday(userId);
 		long completedCount = updateSessionData(session, request);
-		AppliedSessionReward reward = sessionRewardService.applyForCompletedSession(userId, completedCount);
+		boolean firstCompletionToday = completedCount > 0 && !hadCompletedTodayBefore;
 
-		UserCharacter character = reward.character();
-		ExerciseSessionReport exerciseSessionReport = exerciseSessionReportRepository.save(
-			new ExerciseSessionReport(
-				session,
-				session.getUser(),
-				character.getLevel(),
-				reward.previousExp(),
-				reward.earnedExp(),
-				character.getStreak(),
-				reward.previousStatusScore(),
-				reward.earnedStatusScore()
+		String eventId = UUID.randomUUID().toString();
+		exerciseSessionEventPublisher.publishSessionCompleted(
+			new ExerciseSessionCompletedEvent(
+				eventId,
+				LocalDateTime.now(),
+				session.getId(),
+				session.getUser().getId(),
+				session.getRoutine().getId(),
+				session.getStartAt(),
+				session.getEndAt(),
+				session.getIsRoutineCompleted(),
+				completedCount,
+				firstCompletionToday
 			)
 		);
-
-		log.info("Exercise session v2 completed and report created: sessionId={}, userId={}, reportId={}",
-			sessionId, userId, exerciseSessionReport.getId());
-
-		if (completedCount == 0) {
-			notificationService.createStretchingFailed(session.getUser());
-		} else {
-			notificationService.createStretchingSuccess(
-				session.getUser(), reward.earnedExp()
-			);
-		}
+		log.info("Exercise session v2 completed and outbox event queued: sessionId={}, userId={}, eventId={}",
+			sessionId, userId, eventId);
 
 		return new ExerciseSessionReportCreateResponse(
 			session.getId(),
-			exerciseSessionReport.getId(),
 			session.getRoutine().getId(),
 			session.getStartAt(),
 			session.getEndAt(),
