@@ -65,7 +65,7 @@ public class AuthService {
 
 	@Transactional
 	public AuthLoginResponse login(AuthLoginRequest request) {
-		User user = userRepository.findByEmailAndDeletedAtIsNull(request.email())
+		User user = userRepository.findByEmail(request.email())
 			.orElseThrow(() -> new CustomException(ErrorCode.AUTH_INVALID_CREDENTIALS));
 
 		if (!passwordEncoder.matches(request.password(), user.getPassword())) {
@@ -92,7 +92,7 @@ public class AuthService {
 		validateRefreshTokenState(refreshToken);
 		refreshToken.revoke();
 
-		User user = userRepository.findByEmailAndDeletedAtIsNull(jwtClaims.email()).orElseThrow(
+		User user = userRepository.findByEmail(jwtClaims.email()).orElseThrow(
 			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
 		);
 		Tokens tokens = issueTokens(user);
@@ -127,7 +127,7 @@ public class AuthService {
 
 	@Transactional
 	public void setFcmToken(Long userId, String fcmToken) {
-		User user = userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(
+		User user = userRepository.findById(userId).orElseThrow(
 			() -> new CustomException(ErrorCode.USER_NOT_FOUND)
 		);
 

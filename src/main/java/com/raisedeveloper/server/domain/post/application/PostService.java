@@ -1,6 +1,5 @@
 package com.raisedeveloper.server.domain.post.application;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -11,13 +10,13 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.raisedeveloper.server.domain.post.domain.Post;
 import com.raisedeveloper.server.domain.post.domain.PostImage;
-import com.raisedeveloper.server.domain.post.domain.PostLikeOutbox;
 import com.raisedeveloper.server.domain.post.domain.PostTag;
 import com.raisedeveloper.server.domain.post.domain.Tag;
 import com.raisedeveloper.server.domain.post.dto.PostAuthor;
@@ -28,10 +27,12 @@ import com.raisedeveloper.server.domain.post.dto.PostDetailResponse;
 import com.raisedeveloper.server.domain.post.dto.PostLikeResponse;
 import com.raisedeveloper.server.domain.post.dto.PostListItem;
 import com.raisedeveloper.server.domain.post.dto.PostListResponse;
+import com.raisedeveloper.server.domain.post.dto.PostMetaDetailResponse;
+import com.raisedeveloper.server.domain.post.dto.PostMetaItem;
+import com.raisedeveloper.server.domain.post.dto.PostMetaListResponse;
 import com.raisedeveloper.server.domain.post.dto.PostTagInfo;
 import com.raisedeveloper.server.domain.post.dto.PostUpdateRequest;
 import com.raisedeveloper.server.domain.post.infra.PostImageRepository;
-import com.raisedeveloper.server.domain.post.infra.PostLikeOutboxRepository;
 import com.raisedeveloper.server.domain.post.infra.PostLikeRepository;
 import com.raisedeveloper.server.domain.post.infra.PostRepository;
 import com.raisedeveloper.server.domain.post.infra.PostTagRepository;
@@ -63,15 +64,16 @@ public class PostService {
 	private final PostRepository postRepository;
 	private final PostImageRepository postImageRepository;
 	private final PostLikeRepository postLikeRepository;
-	private final PostLikeOutboxRepository postLikeOutboxRepository;
 	private final TagRepository tagRepository;
 	private final PostTagRepository postTagRepository;
 	private final CursorService cursorService;
 	private final PostMapper postMapper;
+	private final LikeCountQueryService likeCountQueryService;
+	private final ApplicationEventPublisher eventPublisher;
 
 	@Transactional
 	public PostCreateResponse createPost(Long userId, PostCreateRequest request) {
-		User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+		User user = userRepository.findById(userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 		List<String> imagePaths = normalizeList(request.images());
 
@@ -124,7 +126,7 @@ public class PostService {
 
 	@Transactional
 	public void updatePost(Long userId, Long postId, PostUpdateRequest request) {
-		Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
+		Post post = postRepository.findById(postId)
 			.orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 		validateAuthor(post, userId);
 
@@ -138,17 +140,17 @@ public class PostService {
 
 	@Transactional
 	public void deletePost(Long userId, Long postId) {
-		Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
+		Post post = postRepository.findById(postId)
 			.orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 		validateAuthor(post, userId);
 
-		post.softDelete(LocalDateTime.now());
+		postRepository.delete(post);
 		postImageRepository.deleteAllByPostId(post.getId());
 		postTagRepository.deleteAllByPostId(post.getId());
 	}
 
 	public PostDetailResponse getPostDetail(Long postId, Long viewerUserId) {
-		Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
+		Post post = postRepository.findById(postId)
 			.orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 
 		User author = post.getUser();
@@ -170,17 +172,33 @@ public class PostService {
 		boolean isAuthor = viewerUserId != null && viewerUserId.equals(author.getId());
 
 		boolean isLiked = viewerUserId != null && postLikeRepository.existsByPostIdAndUserId(postId, viewerUserId);
+		int likeCount = likeCountQueryService.getLikeCount(postId);
 
 		PostAuthor postAuthor = postMapper.toPostAuthor(author.getId(), profile, character);
-		PostDetail detail = postMapper.toPostDetail(post, isAuthor, postAuthor, images, tags, isLiked);
+		PostDetail detail = postMapper.toPostDetail(post, isAuthor, postAuthor, images, tags, isLiked, likeCount);
 
 		return new PostDetailResponse(detail);
+	}
+
+	public PostMetaDetailResponse getPostMeta(Long postId, Long viewerUserId) {
+		Post post = postRepository.findById(postId)
+			.orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
+
+		Long authorId = post.getUser().getId();
+		PostAuthor author = loadAuthorsByUserIds(List.of(authorId)).get(authorId);
+		int likeCount = likeCountQueryService.getLikeCount(postId);
+		boolean isLiked = viewerUserId != null && postLikeRepository.existsByPostIdAndUserId(postId, viewerUserId);
+		boolean isAuthor = viewerUserId != null && viewerUserId.equals(authorId);
+
+		return new PostMetaDetailResponse(
+			new PostMetaItem(postId, author, likeCount, isLiked, isAuthor)
+		);
 	}
 
 	public PostListResponse getPosts(Long authorId, List<String> tagNames, Integer limit, String cursor,
 		Long viewerUserId) {
 		if (authorId != null) {
-			userRepository.findByIdAndDeletedAtIsNull(authorId)
+			userRepository.findById(authorId)
 				.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 		}
 
@@ -198,22 +216,43 @@ public class PostService {
 		return new PostListResponse(items, new PagingResponse(nextCursor, hasNext));
 	}
 
+	public PostMetaListResponse getPostMetaList(Long authorId, List<String> tagNames, Integer limit, String cursor,
+		Long viewerUserId) {
+		if (authorId != null) {
+			userRepository.findById(authorId)
+				.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+		}
+
+		List<String> normalizedTagNames = normalizeTagNames(tagNames);
+		int size = normalizeLimit(limit);
+		Cursor decoded = cursorService.decode(cursor);
+
+		List<Post> posts = fetchPosts(authorId, normalizedTagNames, size, decoded);
+		List<Post> sliced = posts.stream().limit(size).toList();
+		List<PostMetaItem> items = toPostMetaItems(sliced, viewerUserId);
+
+		boolean hasNext = posts.size() > size;
+		String nextCursor = buildNextCursor(sliced);
+
+		return new PostMetaListResponse(items, new PagingResponse(nextCursor, hasNext));
+	}
+
 	@Transactional
 	public PostLikeResponse togglePostLike(Long userId, Long postId, boolean likeRequested) {
-		postRepository.findByIdAndDeletedAtIsNull(postId)
+		postRepository.findById(postId)
 			.orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
-		userRepository.findByIdAndDeletedAtIsNull(userId)
+		userRepository.findById(userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
 		if (likeRequested) {
 			int inserted = postLikeRepository.insertIgnoreByPostIdAndUserId(postId, userId);
 			if (inserted > 0) {
-				postLikeOutboxRepository.save(new PostLikeOutbox(postId, 1));
+				eventPublisher.publishEvent(new PostLikeChangedEvent(postId, 1));
 			}
 		} else {
 			long deleted = postLikeRepository.deleteByPostIdAndUserId(postId, userId);
 			if (deleted > 0) {
-				postLikeOutboxRepository.save(new PostLikeOutbox(postId, -1));
+				eventPublisher.publishEvent(new PostLikeChangedEvent(postId, -1));
 			}
 		}
 
@@ -364,7 +403,59 @@ public class PostService {
 			.map(post -> post.getUser().getId())
 			.distinct()
 			.toList();
+		Map<Long, PostAuthor> authorByUserId = loadAuthorsByUserIds(userIds);
 
+		Map<Long, List<PostTagInfo>> tagsByPostId = loadTagsByPostId(posts);
+
+		List<Long> postIds = posts.stream()
+			.map(Post::getId)
+			.toList();
+		Set<Long> likedPostIds = loadLikedPostIds(viewerUserId, postIds);
+		Map<Long, Integer> likeCountByPostId = likeCountQueryService.getLikeCounts(postIds);
+
+		return posts.stream()
+			.map(post -> {
+				boolean isLiked = likedPostIds.contains(post.getId());
+				return postMapper.toPostListItem(
+					post,
+					authorByUserId.get(post.getUser().getId()),
+					tagsByPostId.getOrDefault(post.getId(), List.of()),
+					isLiked,
+					likeCountByPostId.getOrDefault(post.getId(), 0)
+				);
+			})
+			.toList();
+	}
+
+	private List<PostMetaItem> toPostMetaItems(List<Post> posts, Long viewerUserId) {
+		if (posts.isEmpty()) {
+			return List.of();
+		}
+
+		List<Long> userIds = posts.stream()
+			.map(post -> post.getUser().getId())
+			.distinct()
+			.toList();
+		Map<Long, PostAuthor> authorByUserId = loadAuthorsByUserIds(userIds);
+
+		List<Long> postIds = posts.stream()
+			.map(Post::getId)
+			.toList();
+		Set<Long> likedPostIds = loadLikedPostIds(viewerUserId, postIds);
+		Map<Long, Integer> likeCountByPostId = likeCountQueryService.getLikeCounts(postIds);
+
+		return posts.stream()
+			.map(post -> new PostMetaItem(
+				post.getId(),
+				authorByUserId.get(post.getUser().getId()),
+				likeCountByPostId.getOrDefault(post.getId(), 0),
+				likedPostIds.contains(post.getId()),
+				null
+			))
+			.toList();
+	}
+
+	private Map<Long, PostAuthor> loadAuthorsByUserIds(List<Long> userIds) {
 		Map<Long, UserProfile> profileByUserId = userProfileRepository.findByUserIdIn(userIds).stream()
 			.collect(Collectors.toMap(profile -> profile.getUser().getId(), profile -> profile));
 		if (profileByUserId.size() != userIds.size()) {
@@ -383,30 +474,14 @@ public class PostService {
 			UserCharacter character = characterByUserId.get(userId);
 			authorByUserId.put(userId, postMapper.toPostAuthor(userId, profile, character));
 		}
+		return authorByUserId;
+	}
 
-		Map<Long, List<PostTagInfo>> tagsByPostId = loadTagsByPostId(posts);
-
-		Set<Long> likedPostIds;
-		if (viewerUserId != null) {
-			List<Long> postIds = posts.stream()
-				.map(Post::getId)
-				.toList();
-			likedPostIds = Set.copyOf(postLikeRepository.findPostIdsByUserIdAndPostIdIn(viewerUserId, postIds));
-		} else {
-			likedPostIds = Set.of();
+	private Set<Long> loadLikedPostIds(Long viewerUserId, List<Long> postIds) {
+		if (viewerUserId == null || postIds.isEmpty()) {
+			return Set.of();
 		}
-
-		return posts.stream()
-			.map(post -> {
-				boolean isLiked = likedPostIds.contains(post.getId());
-				return postMapper.toPostListItem(
-					post,
-					authorByUserId.get(post.getUser().getId()),
-					tagsByPostId.getOrDefault(post.getId(), List.of()),
-					isLiked
-				);
-			})
-			.toList();
+		return Set.copyOf(postLikeRepository.findPostIdsByUserIdAndPostIdIn(viewerUserId, postIds));
 	}
 
 	private Map<Long, List<PostTagInfo>> loadTagsByPostId(List<Post> posts) {

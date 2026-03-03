@@ -33,7 +33,8 @@ public class PostMapper {
 		PostAuthor author,
 		List<String> images,
 		List<PostTagInfo> tags,
-		boolean isLiked
+		boolean isLiked,
+		int likeCount
 	) {
 		return new PostDetail(
 			post.getId(),
@@ -43,13 +44,14 @@ public class PostMapper {
 			post.getContent(),
 			images,
 			tags,
-			post.getLikeCount(),
+			likeCount,
 			post.getCreatedAt(),
 			isLiked
 		);
 	}
 
-	public PostListItem toPostListItem(Post post, PostAuthor author, List<PostTagInfo> tags, boolean isLiked) {
+	public PostListItem toPostListItem(Post post, PostAuthor author, List<PostTagInfo> tags, boolean isLiked,
+		int likeCount) {
 		return new PostListItem(
 			post.getId(),
 			author,
@@ -57,7 +59,7 @@ public class PostMapper {
 			post.getContent(),
 			post.getThumbnailImagePath(),
 			tags,
-			post.getLikeCount(),
+			likeCount,
 			post.getCreatedAt(),
 			isLiked
 		);
