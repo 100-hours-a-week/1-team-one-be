@@ -47,7 +47,9 @@ public class UserProfileBatchSyncService {
 		List<AiUserProfileDto> allProfiles = new ArrayList<>();
 
 		while (true) {
-			List<Long> userIds = userRepository.findExerciseSessionUserIdsAfter(lastUserId, PageRequest.of(0, batchSize));
+			List<Long> userIds = userRepository.findExerciseSessionUserIdsAfter(
+				lastUserId, PageRequest.of(0, batchSize)
+			);
 			if (userIds.isEmpty()) {
 				break;
 			}
@@ -89,12 +91,17 @@ public class UserProfileBatchSyncService {
 		List<ExerciseResultRepository.DifficultyRatioProjection> difficultyRatios =
 			exerciseResultRepository.findDifficultyRatiosByUserIds(userIds);
 		difficultyRatios.forEach(row ->
-			difficultyRatiosByUser.get(row.getUserId()).put(String.valueOf(row.getDifficulty()), toDouble(row.getRatio()))
+			difficultyRatiosByUser.get(
+				row.getUserId()).put(String.valueOf(row.getDifficulty()),
+				toDouble(row.getRatio())
+			)
 		);
 
 		List<ExerciseSessionRepository.WeeklyFrequencyProjection> weeklyFrequencies =
 			exerciseSessionRepository.findWeeklyFrequenciesByUserIds(userIds);
-		weeklyFrequencies.forEach(row -> weeklyFrequencyByUser.put(row.getUserId(), toDouble(row.getWeeklyFrequency())));
+		weeklyFrequencies.forEach(
+			row -> weeklyFrequencyByUser.put(row.getUserId(), toDouble(row.getWeeklyFrequency()))
+		);
 
 		List<AiUserProfileDto> profiles = new ArrayList<>(userIds.size());
 		for (Long userId : userIds) {
