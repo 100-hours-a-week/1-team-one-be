@@ -1,5 +1,6 @@
 package com.raisedeveloper.server.domain.exercise.infra;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -74,9 +75,29 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
 		+ "GROUP BY es.user.id")
 	List<UserLastSessionProjection> findLatestSessionsByUserIds(@Param("userIds") List<Long> userIds);
 
+	@Query(value = """
+		SELECT
+		    es.user_id AS userId,
+		    ROUND(
+		        SUM(CASE WHEN es.start_at IS NOT NULL THEN 1 ELSE 0 END) / COUNT(es.id),
+		        2
+		    ) AS weeklyFrequency
+		FROM exercise_sessions es
+		WHERE es.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+		  AND es.user_id IN (:userIds)
+		GROUP BY es.user_id
+		""", nativeQuery = true)
+	List<WeeklyFrequencyProjection> findWeeklyFrequenciesByUserIds(@Param("userIds") List<Long> userIds);
+
 	interface UserLastSessionProjection {
 		Long getUserId();
 
 		LocalDateTime getLastCreatedAt();
+	}
+
+	interface WeeklyFrequencyProjection {
+		Long getUserId();
+
+		BigDecimal getWeeklyFrequency();
 	}
 }
