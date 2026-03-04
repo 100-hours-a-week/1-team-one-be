@@ -14,9 +14,8 @@ import org.springframework.stereotype.Component;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 
 import com.raisedeveloper.server.domain.exercise.application.AlarmScheduleService;
-import com.raisedeveloper.server.domain.exercise.application.ExerciseService;
+import com.raisedeveloper.server.domain.exercise.application.AlarmSessionDispatchService;
 import com.raisedeveloper.server.domain.exercise.domain.ExerciseSession;
-import com.raisedeveloper.server.domain.push.application.PushService;
 import com.raisedeveloper.server.domain.user.domain.User;
 import com.raisedeveloper.server.domain.user.domain.UserAlarmSettings;
 import com.raisedeveloper.server.domain.user.infra.UserAlarmSettingsRepository;
@@ -34,8 +33,7 @@ public class PushAlarmScheduler {
 	private static final int DUE_BATCH_SIZE = 500;
 
 	private final UserAlarmSettingsRepository userAlarmSettingsRepository;
-	private final PushService pushService;
-	private final ExerciseService exerciseService;
+	private final AlarmSessionDispatchService alarmSessionDispatchService;
 	private final AlarmScheduleService alarmScheduleService;
 	@Autowired
 	private EntityManagerFactory entityManagerFactory;
@@ -97,7 +95,7 @@ public class PushAlarmScheduler {
 		long queriesInStep3 = statistics.getQueryExecutionCount() - queriesBeforeStep3;
 		long entitiesInStep3 = statistics.getEntityLoadCount() - entitiesBeforeStep3;
 
-		log.info("[Step 3] 세션 생성: {}건, 소요시간: {}ms",
+		log.info("[Step 3] 세션 생성 + 이벤트 기록: {}건, 소요시간: {}ms",
 			createdSessions.size(), step3Time);
 		log.info("[Step 3] 쿼리 수: {}, 엔티티 로드 수: {}",
 			queriesInStep3, entitiesInStep3);
@@ -106,15 +104,14 @@ public class PushAlarmScheduler {
 		long queriesBeforeStep4 = statistics.getQueryExecutionCount();
 		long entitiesBeforeStep4 = statistics.getEntityLoadCount();
 
-		sendSessionAlarms(createdSessions);
 		advanceAfterDue(settings);
 
 		long step4Time = System.currentTimeMillis() - step4Start;
 		long queriesInStep4 = statistics.getQueryExecutionCount() - queriesBeforeStep4;
 		long entitiesInStep4 = statistics.getEntityLoadCount() - entitiesBeforeStep4;
 
-		log.info("[Step 4] 푸시 전송: {}건, 소요시간: {}ms",
-			createdSessions.size(), step4Time);
+		log.info("[Step 4] 스케줄 전진: {}건, 소요시간: {}ms",
+			settings.size(), step4Time);
 		log.info("[Step 4] 쿼리 수: {}, 엔티티 로드 수: {}",
 			queriesInStep4, entitiesInStep4);
 
@@ -126,9 +123,9 @@ public class PushAlarmScheduler {
 			step1Time, String.format("%.1f", step1Time * 100.0 / totalTime));
 		log.info("  - Step 2 (필터): {}ms ({}%)",
 			step2Time, String.format("%.1f", step2Time * 100.0 / totalTime));
-		log.info("  - Step 3 (세션): {}ms ({}%)",
+		log.info("  - Step 3 (세션+아웃박스): {}ms ({}%)",
 			step3Time, String.format("%.1f", step3Time * 100.0 / totalTime));
-		log.info("  - Step 4 (푸시): {}ms ({}%)",
+		log.info("  - Step 4 (스케줄): {}ms ({}%)",
 			step4Time, String.format("%.1f", step4Time * 100.0 / totalTime));
 		log.info("========================================");
 
@@ -143,7 +140,6 @@ public class PushAlarmScheduler {
 
 	private List<ExerciseSession> createSessions(List<UserAlarmSettings> alarmSettingsList) {
 		return alarmSettingsList.stream()
-			.map(UserAlarmSettings::getUser)
 			.map(this::tryCreateSession)
 			.flatMap(Optional::stream)
 			.toList();
@@ -159,24 +155,18 @@ public class PushAlarmScheduler {
 		}
 	}
 
-	private void sendSessionAlarms(List<ExerciseSession> sessions) {
-		sessions.forEach(session -> trySendSessionAlarm(session.getUser(), session));
-	}
-
-	private Optional<ExerciseSession> tryCreateSession(User user) {
+	private Optional<ExerciseSession> tryCreateSession(UserAlarmSettings settings) {
+		User user = settings.getUser();
+		LocalDateTime scheduledAt = settings.getNextFireAt();
 		try {
-			return Optional.of(exerciseService.createSession(user));
+			return Optional.of(alarmSessionDispatchService.createSessionAndPublish(user, scheduledAt));
 		} catch (CustomException e) {
-			log.error("세션 생성 실패(CustomException) - userId: {}, code: {}", user.getId(), e.getErrorCode(), e);
+			log.error("세션 생성/이벤트 저장 실패(CustomException) - userId: {}, code: {}",
+				user.getId(), e.getErrorCode(), e);
 			return Optional.empty();
-		}
-	}
-
-	private void trySendSessionAlarm(User user, ExerciseSession session) {
-		try {
-			pushService.sendSessionPush(user, session);
 		} catch (Exception e) {
-			log.error("푸시 알림 전송 실패 - userId: {}, sessionId: {}", user.getId(), session.getId(), e);
+			log.error("세션 생성/이벤트 저장 실패 - userId: {}", user.getId(), e);
+			return Optional.empty();
 		}
 	}
 }
