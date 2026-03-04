@@ -23,7 +23,8 @@ public class ExerciseSessionPushConsumer {
 
 	@KafkaListener(
 		topics = ExerciseKafkaTopics.ALARM_SESSION_CREATED_V1,
-		groupId = AlarmConsumerConstants.PUSH_GROUP_ID
+		groupId = AlarmConsumerConstants.PUSH_GROUP_ID,
+		concurrency = "${spring.app.kafka.alarm-push.concurrency:6}"
 	)
 	public void consume(String message) throws Exception {
 		ExerciseSessionCreatedEvent event = objectMapper.readValue(message, ExerciseSessionCreatedEvent.class);
