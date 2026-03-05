@@ -48,6 +48,7 @@ public final class ErrorMessageConstants {
 	public static final String EXERCISE_NOT_FOUND_MESSAGE = "운동 정보를 찾을 수 없습니다.";
 	public static final String EXERCISE_TYPE_MISMATCH_MESSAGE = "운동 타입이 일치하지 않습니다.";
 	public static final String EXERCISE_SESSION_NOT_FOUND_MESSAGE = "운동 세션을 찾을 수 없습니다.";
+	public static final String EXERCISE_SESSION_REPORT_NOT_FOUND_MESSAGE = "운동 세션 리포트를 찾을 수 없습니다.";
 
 	// AI server (error reasons)
 	public static final String AI_SERVER_CONNECTION_FAILED_MESSAGE = "AI 서버에 연결할 수 없습니다.";
