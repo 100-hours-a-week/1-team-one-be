@@ -25,6 +25,7 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
 
 	@Query("SELECT es FROM ExerciseSession es "
 		+ "JOIN FETCH es.routine r "
+		+ "JOIN FETCH es.user u "
 		+ "WHERE es.id = :sessionId AND es.user.id = :userId")
 	Optional<ExerciseSession> findByIdAndUserIdWithRoutine(
 		@Param("sessionId") Long sessionId,

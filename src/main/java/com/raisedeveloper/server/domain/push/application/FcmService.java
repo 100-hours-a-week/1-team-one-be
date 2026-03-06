@@ -7,7 +7,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import com.google.firebase.messaging.FirebaseMessaging;
@@ -41,11 +40,7 @@ public class FcmService implements PushService {
 	private String iconUrl;
 
 	@Override
-	@Async("pushExecutor")
-	public void sendSessionPush(User user, ExerciseSession session) {
-		log.info("FCM 세션 알림 전송 (비동기) - userId: {}, sessionId: {}, thread: {}",
-			user.getId(), session.getId(), Thread.currentThread().getName());
-
+	public PushDeliveryStatus sendSessionPush(User user, ExerciseSession session) {
 		FcmToken fcmToken = fcmTokenRepository
 			.findFirstByUserIdAndRevokedAtNull(user.getId())
 			.orElseGet(() -> {
@@ -54,20 +49,22 @@ public class FcmService implements PushService {
 			});
 
 		if (fcmToken == null) {
-			return;
+			return PushDeliveryStatus.FAILED_PERMANENT;
 		}
 
 		try {
 			String link = buildSessionLink(session);
-			sendMessageToToken(fcmToken.getToken(), buildSessionData(session), link, iconUrl);
+			sendMessageToToken(fcmToken.getToken(), buildSessionData(user.getId(), session), link, iconUrl);
 			fcmTokenTxService.markTokenUsed(fcmToken);
 
-			log.info("FCM 알림 전송 성공 (비동기) - userId: {}, thread: {}",
-				user.getId(), Thread.currentThread().getName());
+			return PushDeliveryStatus.SENT;
 		} catch (FirebaseMessagingException e) {
-			log.error("FCM 알림 전송 실패 - userId: {}, token: {}",
-				user.getId(), fcmToken.getToken(), e);
-			handleSendFailure(fcmToken, e);
+			log.error("FCM 알림 전송 실패 - userId: {}, sessionId: {}, token: {}",
+				user.getId(), session.getId(), fcmToken.getToken(), e);
+			if (handleSendFailure(fcmToken, e)) {
+				return PushDeliveryStatus.FAILED_PERMANENT;
+			}
+			throw new IllegalStateException("Retryable FCM failure: " + e.getMessage(), e);
 		}
 	}
 
@@ -106,13 +103,13 @@ public class FcmService implements PushService {
 		log.info("FCM 알림 전송 성공 - token: {}, response: {}", token, response);
 	}
 
-	private Map<String, String> buildSessionData(ExerciseSession session) {
+	private Map<String, String> buildSessionData(Long userId, ExerciseSession session) {
 		String timestamp = LocalDateTime.now()
 			.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
 		return Map.of(
 			"type", "SESSION_READY",
-			"userId", String.valueOf(session.getUser().getId()),
+			"userId", String.valueOf(userId),
 			"ts", timestamp,
 			"sessionId", String.valueOf(session.getId()),
 			"routineId", String.valueOf(session.getRoutine().getId())
@@ -125,17 +122,17 @@ public class FcmService implements PushService {
 		return normalizedBase + "/stretch/" + session.getId();
 	}
 
-	private void handleSendFailure(FcmToken fcmToken, Exception exception) {
-		if (exception instanceof FirebaseMessagingException fme) {
-			String errorCode = fme.getMessagingErrorCode() != null
-				? fme.getMessagingErrorCode().name()
-				: "UNKNOWN";
+	private boolean handleSendFailure(FcmToken fcmToken, FirebaseMessagingException exception) {
+		String errorCode = exception.getMessagingErrorCode() != null
+			? exception.getMessagingErrorCode().name()
+			: "UNKNOWN";
 
-			if ("INVALID_ARGUMENT".equals(errorCode) || "UNREGISTERED".equals(errorCode)) {
-				log.warn("유효하지 않은 FCM 토큰 - userId: {}, token: {}, errorCode: {}",
-					fcmToken.getUser().getId(), fcmToken.getToken(), errorCode);
-				fcmTokenTxService.revokeToken(fcmToken);
-			}
+		if ("INVALID_ARGUMENT".equals(errorCode) || "UNREGISTERED".equals(errorCode)) {
+			log.warn("유효하지 않은 FCM 토큰 - userId: {}, token: {}, errorCode: {}",
+				fcmToken.getUser().getId(), fcmToken.getToken(), errorCode);
+			fcmTokenTxService.revokeToken(fcmToken);
+			return true;
 		}
+		return false;
 	}
 }

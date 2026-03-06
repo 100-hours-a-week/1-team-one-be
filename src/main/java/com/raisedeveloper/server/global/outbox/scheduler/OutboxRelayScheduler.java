@@ -21,7 +21,10 @@ public class OutboxRelayScheduler {
 	@Value("${app.outbox.relay.batch-size:100}")
 	private int batchSize;
 
-	@Scheduled(fixedDelayString = "${app.outbox.relay.fixed-delay-ms:1000}")
+	@Scheduled(
+		fixedDelayString = "${app.outbox.relay.fixed-delay-ms:1000}",
+		scheduler = "outboxTaskScheduler"
+	)
 	@SchedulerLock(name = "OutboxRelayScheduler.relay", lockAtMostFor = "PT30S")
 	public void relay() {
 		outboxRelayService.relayPendingBatch(batchSize);

@@ -5,5 +5,5 @@ import com.raisedeveloper.server.domain.user.domain.User;
 
 public interface PushService {
 
-	void sendSessionPush(User user, ExerciseSession session);
+	PushDeliveryStatus sendSessionPush(User user, ExerciseSession session);
 }
