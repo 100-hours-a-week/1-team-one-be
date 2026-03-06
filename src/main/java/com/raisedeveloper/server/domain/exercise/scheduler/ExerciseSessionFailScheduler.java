@@ -34,7 +34,7 @@ public class ExerciseSessionFailScheduler {
 	private final UserCharacterRepository userCharacterRepository;
 	private final NotificationService notificationService;
 
-	@Scheduled(cron = "0 */5 * * * *")
+	@Scheduled(cron = "0 */5 * * * *", scheduler = "defaultTaskScheduler")
 	@SchedulerLock(name = "ExerciseSessionFailScheduler.failStaleSessions", lockAtMostFor = "PT10M")
 	@Transactional
 	public void failStaleSessions() {

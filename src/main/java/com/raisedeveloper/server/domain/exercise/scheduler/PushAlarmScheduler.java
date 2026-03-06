@@ -40,7 +40,7 @@ public class PushAlarmScheduler {
 	@Autowired
 	private EntityManagerFactory entityManagerFactory;
 
-	@Scheduled(cron = "0 */1 * * * *")
+	@Scheduled(cron = "0 */1 * * * *", scheduler = "defaultTaskScheduler")
 	@SchedulerLock(name = "PushAlarmScheduler.processAlarms", lockAtMostFor = "PT5M")
 	public void processAlarms() {
 		SessionFactory sessionFactory = entityManagerFactory.unwrap(SessionFactory.class);
