@@ -5,7 +5,7 @@ CLAUDE.md
 src/main/resources/firebase/
 src/main/resources/gcs
 logs/
-monitoring/
+/monitoring/
 load_test/
 
 .gradle
