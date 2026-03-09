@@ -5,10 +5,15 @@ import static com.raisedeveloper.server.domain.common.MessageConstants.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import com.google.api.core.ApiFuture;
+import com.google.api.core.ApiFutureCallback;
+import com.google.api.core.ApiFutures;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
@@ -41,6 +46,11 @@ public class FcmService implements PushService {
 
 	@Override
 	public PushDeliveryStatus sendSessionPush(User user, ExerciseSession session) {
+		return sendSessionPushAsync(user, session).join();
+	}
+
+	@Override
+	public CompletableFuture<PushDeliveryStatus> sendSessionPushAsync(User user, ExerciseSession session) {
 		FcmToken fcmToken = fcmTokenRepository
 			.findFirstByUserIdAndRevokedAtNull(user.getId())
 			.orElseGet(() -> {
@@ -49,37 +59,56 @@ public class FcmService implements PushService {
 			});
 
 		if (fcmToken == null) {
-			return PushDeliveryStatus.FAILED_PERMANENT;
+			return CompletableFuture.completedFuture(PushDeliveryStatus.FAILED_PERMANENT);
 		}
 
+		String link = buildSessionLink(session);
+		Map<String, String> data = buildSessionData(user.getId(), session);
+		Message message = buildMessage(fcmToken.getToken(), data, link, iconUrl);
+		if (firebaseMessaging == null) {
+			log.warn("Firebase Messaging이 초기화되지 않았습니다. 알림을 전송할 수 없습니다.");
+			return CompletableFuture.completedFuture(PushDeliveryStatus.SENT);
+		}
+
+		CompletableFuture<PushDeliveryStatus> result = new CompletableFuture<>();
 		try {
-			String link = buildSessionLink(session);
-			sendMessageToToken(fcmToken.getToken(), buildSessionData(user.getId(), session), link, iconUrl);
-			fcmTokenTxService.markTokenUsed(fcmToken);
+			ApiFuture<String> apiFuture = firebaseMessaging.sendAsync(message);
+			ApiFutures.addCallback(apiFuture, new ApiFutureCallback<>() {
+				@Override
+				public void onSuccess(String response) {
+					log.info("FCM 알림 전송 성공 - token: {}, response: {}", fcmToken.getToken(), response);
+					fcmTokenTxService.markTokenUsed(fcmToken);
+					result.complete(PushDeliveryStatus.SENT);
+				}
 
-			return PushDeliveryStatus.SENT;
-		} catch (FirebaseMessagingException e) {
-			log.error("FCM 알림 전송 실패 - userId: {}, sessionId: {}, token: {}",
-				user.getId(), session.getId(), fcmToken.getToken(), e);
-			if (handleSendFailure(fcmToken, e)) {
-				return PushDeliveryStatus.FAILED_PERMANENT;
-			}
-			throw new IllegalStateException("Retryable FCM failure: " + e.getMessage(), e);
+				@Override
+				public void onFailure(Throwable throwable) {
+					if (throwable instanceof FirebaseMessagingException e) {
+						log.error("FCM 알림 전송 실패 - userId: {}, sessionId: {}, token: {}",
+							user.getId(), session.getId(), fcmToken.getToken(), e);
+						if (handleSendFailure(fcmToken, e)) {
+							result.complete(PushDeliveryStatus.FAILED_PERMANENT);
+							return;
+						}
+						result.completeExceptionally(
+							new IllegalStateException("Retryable FCM failure: " + e.getMessage(), e));
+						return;
+					}
+					result.completeExceptionally(throwable);
+				}
+			}, MoreExecutors.directExecutor());
+		} catch (Exception e) {
+			result.completeExceptionally(e);
 		}
+		return result;
 	}
 
-	private void sendMessageToToken(
+	private Message buildMessage(
 		String token,
 		Map<String, String> data,
 		String link,
 		String iconUrl
-	)
-		throws FirebaseMessagingException {
-
-		if (firebaseMessaging == null) {
-			log.warn("Firebase Messaging이 초기화되지 않았습니다. 알림을 전송할 수 없습니다.");
-			return;
-		}
+	) {
 
 		Message.Builder messageBuilder = Message.builder()
 			.setToken(token)
@@ -98,9 +127,7 @@ public class FcmService implements PushService {
 		if (data != null && !data.isEmpty()) {
 			messageBuilder.putAllData(data);
 		}
-
-		String response = firebaseMessaging.send(messageBuilder.build());
-		log.info("FCM 알림 전송 성공 - token: {}, response: {}", token, response);
+		return messageBuilder.build();
 	}
 
 	private Map<String, String> buildSessionData(Long userId, ExerciseSession session) {
