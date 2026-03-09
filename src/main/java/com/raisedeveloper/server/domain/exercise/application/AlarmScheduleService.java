@@ -1,6 +1,7 @@
 package com.raisedeveloper.server.domain.exercise.application;
 
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -12,6 +13,7 @@ import java.util.Set;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,10 +28,35 @@ import lombok.RequiredArgsConstructor;
 public class AlarmScheduleService {
 
 	private static final String REDIS_KEY = "alarm:next_fire_at";
+	private static final String REDIS_PROCESSING_KEY = "alarm:processing_fire_at";
 	private static final int MAX_LOOKAHEAD_DAYS = 7;
+	private static final DefaultRedisScript<List> CLAIM_DUE_USERS_SCRIPT = createClaimScript();
 
 	private final StringRedisTemplate redisTemplate;
 	private final UserAlarmSettingsRepository userAlarmSettingsRepository;
+
+	@Transactional
+	public List<Long> claimDueUserIds(LocalDateTime now, int limit, Duration leaseDuration) {
+		requeueExpiredProcessing(now);
+
+		long nowScore = toEpochMilli(now);
+		long leaseUntilScore = toEpochMilli(now.plus(leaseDuration));
+
+		List<String> claimedUsers = redisTemplate.execute(
+			CLAIM_DUE_USERS_SCRIPT,
+			List.of(REDIS_KEY, REDIS_PROCESSING_KEY),
+			String.valueOf(nowScore),
+			String.valueOf(limit),
+			String.valueOf(leaseUntilScore)
+		);
+		if (claimedUsers == null || claimedUsers.isEmpty()) {
+			return List.of();
+		}
+
+		return claimedUsers.stream()
+			.map(Long::valueOf)
+			.toList();
+	}
 
 	public List<Long> fetchDueUserIds(LocalDateTime now, int limit) {
 		ZSetOperations<String, String> zset = redisTemplate.opsForZSet();
@@ -84,6 +111,24 @@ public class AlarmScheduleService {
 
 	public void removeFromSchedule(Long userId) {
 		redisTemplate.opsForZSet().remove(REDIS_KEY, userId.toString());
+		redisTemplate.opsForZSet().remove(REDIS_PROCESSING_KEY, userId.toString());
+	}
+
+	public void markClaimCompleted(Long userId) {
+		redisTemplate.opsForZSet().remove(REDIS_PROCESSING_KEY, userId.toString());
+	}
+
+	public void requeueExpiredProcessing(LocalDateTime now) {
+		double nowScore = toScore(now);
+		Set<String> expiredUsers = redisTemplate.opsForZSet()
+			.rangeByScore(REDIS_PROCESSING_KEY, Double.NEGATIVE_INFINITY, nowScore);
+		if (expiredUsers == null || expiredUsers.isEmpty()) {
+			return;
+		}
+		for (String userId : expiredUsers) {
+			redisTemplate.opsForZSet().remove(REDIS_PROCESSING_KEY, userId);
+			redisTemplate.opsForZSet().add(REDIS_KEY, userId, nowScore);
+		}
 	}
 
 	@Transactional
@@ -206,5 +251,28 @@ public class AlarmScheduleService {
 
 	private double toScore(LocalDateTime time) {
 		return time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+	}
+
+	private long toEpochMilli(LocalDateTime time) {
+		return time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+	}
+
+	private static DefaultRedisScript<List> createClaimScript() {
+		DefaultRedisScript<List> script = new DefaultRedisScript<>();
+		script.setResultType(List.class);
+		script.setScriptText("""
+			local dueKey = KEYS[1]
+			local processingKey = KEYS[2]
+			local nowScore = ARGV[1]
+			local limit = tonumber(ARGV[2])
+			local leaseUntil = ARGV[3]
+			local candidates = redis.call('ZRANGEBYSCORE', dueKey, '-inf', nowScore, 'LIMIT', 0, limit)
+			for i, member in ipairs(candidates) do
+			  redis.call('ZREM', dueKey, member)
+			  redis.call('ZADD', processingKey, leaseUntil, member)
+			end
+			return candidates
+			""");
+		return script;
 	}
 }

@@ -1,27 +1,25 @@
 package com.raisedeveloper.server.domain.exercise.scheduler;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
-import org.hibernate.SessionFactory;
-import org.hibernate.stat.Statistics;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 
 import com.raisedeveloper.server.domain.exercise.application.AlarmScheduleService;
-import com.raisedeveloper.server.domain.exercise.application.AlarmSessionDispatchService;
-import com.raisedeveloper.server.domain.exercise.domain.ExerciseSession;
-import com.raisedeveloper.server.domain.user.domain.User;
+import com.raisedeveloper.server.domain.exercise.event.AlarmDueUserEvent;
+import com.raisedeveloper.server.domain.exercise.event.AlarmEventPublisher;
 import com.raisedeveloper.server.domain.user.domain.UserAlarmSettings;
 import com.raisedeveloper.server.domain.user.infra.UserAlarmSettingsRepository;
-import com.raisedeveloper.server.global.exception.CustomException;
 
-import jakarta.persistence.EntityManagerFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -31,127 +29,86 @@ import lombok.extern.slf4j.Slf4j;
 public class PushAlarmScheduler {
 
 	private static final int DUE_BATCH_SIZE = 500;
+	private static final Duration CLAIM_LEASE_DURATION = Duration.ofMinutes(5);
 	private static final int MAX_DRAIN_PER_RUN = 20_000;
 	private static final long MAX_RUN_MILLIS = 50_000L;
 
 	private final UserAlarmSettingsRepository userAlarmSettingsRepository;
-	private final AlarmSessionDispatchService alarmSessionDispatchService;
 	private final AlarmScheduleService alarmScheduleService;
-	@Autowired
-	private EntityManagerFactory entityManagerFactory;
+	private final AlarmEventPublisher alarmEventPublisher;
 
 	@Scheduled(cron = "0 */1 * * * *", scheduler = "defaultTaskScheduler")
 	@SchedulerLock(name = "PushAlarmScheduler.processAlarms", lockAtMostFor = "PT5M")
 	public void processAlarms() {
-		SessionFactory sessionFactory = entityManagerFactory.unwrap(SessionFactory.class);
-		Statistics statistics = sessionFactory.getStatistics();
-		statistics.clear();
-		statistics.setStatisticsEnabled(true);
-		log.info("========================================");
-		log.info("푸시 알람 스케줄러 시작 - {}", LocalDateTime.now());
-		long startTime = System.currentTimeMillis();
+		dispatchDueUsers();
+	}
 
+	private void dispatchDueUsers() {
+		long startedAt = System.currentTimeMillis();
 		LocalDateTime dueCutoff = LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES);
+		int totalClaimed = 0;
+		int totalPublished = 0;
 		int loopCount = 0;
-		int fetchedDueTotal = 0;
-		int processedSettingsTotal = 0;
-		int createdSessionsTotal = 0;
 
 		while (true) {
-			long elapsed = System.currentTimeMillis() - startTime;
+			long elapsed = System.currentTimeMillis() - startedAt;
 			if (elapsed >= MAX_RUN_MILLIS) {
-				log.warn("드레인 루프 중단(실행 시간 제한 초과) - elapsedMs: {}, maxMs: {}, loops: {}",
+				log.warn("[Dispatcher] stop by runtime budget: elapsedMs={}, maxMs={}, loops={}",
 					elapsed, MAX_RUN_MILLIS, loopCount);
 				break;
 			}
-			if (fetchedDueTotal >= MAX_DRAIN_PER_RUN) {
-				log.warn("드레인 루프 중단(최대 처리 건수 도달) - fetchedDueTotal: {}, maxPerRun: {}, loops: {}",
-					fetchedDueTotal, MAX_DRAIN_PER_RUN, loopCount);
+			if (totalClaimed >= MAX_DRAIN_PER_RUN) {
+				log.warn("[Dispatcher] stop by drain cap: claimed={}, cap={}, loops={}",
+					totalClaimed, MAX_DRAIN_PER_RUN, loopCount);
 				break;
 			}
 
-			int remaining = MAX_DRAIN_PER_RUN - fetchedDueTotal;
+			int remaining = MAX_DRAIN_PER_RUN - totalClaimed;
 			int currentBatchSize = Math.min(DUE_BATCH_SIZE, remaining);
 			if (currentBatchSize <= 0) {
 				break;
 			}
 
-			long batchStart = System.currentTimeMillis();
-			List<Long> dueUserIds = alarmScheduleService.fetchDueUserIds(dueCutoff, currentBatchSize);
-			if (dueUserIds.isEmpty()) {
+			List<Long> claimedUserIds = alarmScheduleService.claimDueUserIds(
+				dueCutoff,
+				currentBatchSize,
+				CLAIM_LEASE_DURATION
+			);
+			if (claimedUserIds.isEmpty()) {
 				if (loopCount == 0) {
-					log.info("[Drain] 처리 대상 없음");
+					log.info("[Dispatcher] no due users");
 				}
 				break;
 			}
 
-			List<UserAlarmSettings> settings = userAlarmSettingsRepository.findByUserIdInWithUser(dueUserIds);
-			List<ExerciseSession> createdSessions = createSessions(settings);
-			advanceAfterDue(settings);
+			Map<Long, UserAlarmSettings> settingsByUserId = userAlarmSettingsRepository.findByUserIdInWithUser(claimedUserIds)
+				.stream()
+				.collect(Collectors.toMap(s -> s.getUser().getId(), Function.identity()));
+
+			int publishedInLoop = 0;
+			for (Long userId : claimedUserIds) {
+				UserAlarmSettings settings = settingsByUserId.get(userId);
+				if (settings == null || settings.getNextFireAt() == null) {
+					alarmScheduleService.removeFromSchedule(userId);
+					continue;
+				}
+
+				alarmEventPublisher.publishDueUser(new AlarmDueUserEvent(
+					UUID.randomUUID().toString(),
+					userId,
+					settings.getNextFireAt(),
+					LocalDateTime.now(),
+					UUID.randomUUID().toString()
+				));
+				publishedInLoop++;
+			}
 
 			loopCount++;
-			fetchedDueTotal += dueUserIds.size();
-			processedSettingsTotal += settings.size();
-			createdSessionsTotal += createdSessions.size();
-
-			log.info("[Drain-{}] due 조회: {}건, 설정 처리: {}건, 세션 생성: {}건, 소요시간: {}ms",
-				loopCount,
-				dueUserIds.size(),
-				settings.size(),
-				createdSessions.size(),
-				System.currentTimeMillis() - batchStart);
+			totalClaimed += claimedUserIds.size();
+			totalPublished += publishedInLoop;
 		}
 
-		long totalTime = System.currentTimeMillis() - startTime;
-
-		log.info("========================================");
-		log.info("[총합] 전체 소요시간: {}ms", totalTime);
-		log.info("  - 드레인 루프 횟수: {}", loopCount);
-		log.info("  - due 조회 누계: {}", fetchedDueTotal);
-		log.info("  - 설정 처리 누계: {}", processedSettingsTotal);
-		log.info("  - 세션 생성 누계: {}", createdSessionsTotal);
-		log.info("  - 배치 크기/상한: {}/{}", DUE_BATCH_SIZE, MAX_DRAIN_PER_RUN);
-		log.info("  - 실행 시간 상한(ms): {}", MAX_RUN_MILLIS);
-		log.info("========================================");
-
-		log.info("========================================");
-		log.info("[전체 쿼리 통계]");
-		log.info("  - 총 쿼리 수: {}", statistics.getQueryExecutionCount());
-		log.info("  - PreparedStatement 수: {}", statistics.getPrepareStatementCount());
-		log.info("  - 엔티티 로드 수: {}", statistics.getEntityLoadCount());
-		log.info("  - 컬렉션 로드 수: {}", statistics.getCollectionLoadCount());
-		log.info("========================================");
-	}
-
-	private List<ExerciseSession> createSessions(List<UserAlarmSettings> alarmSettingsList) {
-		return alarmSettingsList.stream()
-			.map(this::tryCreateSession)
-			.flatMap(Optional::stream)
-			.toList();
-	}
-
-	private void advanceAfterDue(List<UserAlarmSettings> dueSettings) {
-		for (UserAlarmSettings settings : dueSettings) {
-			LocalDateTime scheduledAt = settings.getNextFireAt();
-			if (scheduledAt == null) {
-				continue;
-			}
-			alarmScheduleService.advanceAfterDue(settings, scheduledAt);
-		}
-	}
-
-	private Optional<ExerciseSession> tryCreateSession(UserAlarmSettings settings) {
-		User user = settings.getUser();
-		LocalDateTime scheduledAt = settings.getNextFireAt();
-		try {
-			return Optional.of(alarmSessionDispatchService.createSessionAndPublish(user, scheduledAt));
-		} catch (CustomException e) {
-			log.error("세션 생성/이벤트 저장 실패(CustomException) - userId: {}, code: {}",
-				user.getId(), e.getErrorCode(), e);
-			return Optional.empty();
-		} catch (Exception e) {
-			log.error("세션 생성/이벤트 저장 실패 - userId: {}", user.getId(), e);
-			return Optional.empty();
-		}
+		log.info("[Dispatcher] finished: claimed={}, published={}, loops={}, elapsedMs={}",
+			totalClaimed, totalPublished, loopCount, System.currentTimeMillis() - startedAt);
 	}
 }
