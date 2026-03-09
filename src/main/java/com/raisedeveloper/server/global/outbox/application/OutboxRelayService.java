@@ -5,12 +5,10 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-import org.springframework.data.domain.PageRequest;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
 
 import com.raisedeveloper.server.global.outbox.domain.OutboxEvent;
-import com.raisedeveloper.server.global.outbox.domain.OutboxStatus;
 import com.raisedeveloper.server.global.outbox.infra.OutboxEventRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -25,15 +23,13 @@ public class OutboxRelayService {
 	private final OutboxKafkaPublisher outboxKafkaPublisher;
 	private final OutboxStateService outboxStateService;
 
-	public List<OutboxEvent> loadPendingBatch(int batchSize) {
-		return outboxEventRepository.findByStatusOrderByIdAsc(
-			OutboxStatus.PENDING,
-			PageRequest.of(0, batchSize)
-		);
-	}
-
 	public void relayPendingBatch(int batchSize) {
-		List<OutboxEvent> pendingEvents = loadPendingBatch(batchSize);
+		List<Long> claimedIds = outboxStateService.claimPendingBatchIds(batchSize);
+		if (claimedIds.isEmpty()) {
+			return;
+		}
+
+		List<OutboxEvent> pendingEvents = outboxEventRepository.findByIdInOrderByIdAsc(claimedIds);
 		if (pendingEvents.isEmpty()) {
 			return;
 		}
