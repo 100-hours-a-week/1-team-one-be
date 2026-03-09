@@ -125,7 +125,6 @@ public final class ErrorMessageConstants {
 	public static final String QUEST_NAME_TOO_LONG_MESSAGE = "퀘스트 이름은 최대 50자까지 가능합니다.";
 	public static final String QUEST_IMAGE_PATH_REQUIRED_MESSAGE = "퀘스트 이미지 경로는 필수입니다.";
 	public static final String QUEST_TYPE_REQUIRED_MESSAGE = "퀘스트 타입은 필수입니다.";
-	public static final String QUEST_MISSION_TYPE_REQUIRED_MESSAGE = "퀘스트 미션 타입은 필수입니다.";
 	public static final String QUEST_REWARD_EXP_MIN_MESSAGE = "퀘스트 보상 경험치는 1 이상이어야 합니다.";
 	public static final String QUEST_TARGET_COUNT_MIN_MESSAGE = "퀘스트 목표 카운트는 1 이상이어야 합니다.";
 	public static final String QUEST_FINISHED_AT_REQUIRED_MESSAGE = "퀘스트 종료 시간은 필수입니다.";

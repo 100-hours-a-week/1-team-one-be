@@ -3,7 +3,6 @@ package com.raisedeveloper.server.domain.quest.domain;
 import java.time.LocalDateTime;
 
 import com.raisedeveloper.server.domain.common.domain.CreatedUpdatedEntity;
-import com.raisedeveloper.server.domain.common.enums.QuestMissionType;
 import com.raisedeveloper.server.domain.common.enums.QuestType;
 
 import jakarta.persistence.Column;
@@ -38,10 +37,6 @@ public class Quest extends CreatedUpdatedEntity {
 	@Enumerated(EnumType.STRING)
 	private QuestType type;
 
-	@Column(nullable = false, length = 30)
-	@Enumerated(EnumType.STRING)
-	private QuestMissionType missionType;
-
 	@Column(nullable = false)
 	private int rewardExp;
 
@@ -55,7 +50,6 @@ public class Quest extends CreatedUpdatedEntity {
 		String name,
 		String questImagePath,
 		QuestType type,
-		QuestMissionType missionType,
 		int rewardExp,
 		short targetCount,
 		LocalDateTime finishedAt
@@ -63,7 +57,6 @@ public class Quest extends CreatedUpdatedEntity {
 		this.name = name;
 		this.questImagePath = questImagePath;
 		this.type = type;
-		this.missionType = missionType;
 		this.rewardExp = rewardExp;
 		this.targetCount = targetCount;
 		this.finishedAt = finishedAt;

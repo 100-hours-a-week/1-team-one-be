@@ -41,7 +41,6 @@ public class QuestService {
 				request.name(),
 				request.questImagePath(),
 				request.type(),
-				request.missionType(),
 				request.rewardExp(),
 				request.targetCount(),
 				request.finishedAt()
@@ -79,7 +78,7 @@ public class QuestService {
 		).stream().collect(Collectors.toMap(progress -> progress.getQuest().getId(), Function.identity()));
 
 		return activeQuests.stream()
-			.map(quest -> questMapper.toQuestItem(progressMap.get(quest.getId())))
+			.map(quest -> questMapper.toQuestItem(quest, progressMap.get(quest.getId())))
 			.toList();
 	}
 }

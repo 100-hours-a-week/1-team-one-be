@@ -7,7 +7,6 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.raisedeveloper.server.domain.common.enums.QuestMissionType;
 import com.raisedeveloper.server.domain.exercise.dto.QuestProgressDto;
 import com.raisedeveloper.server.domain.quest.domain.Quest;
 import com.raisedeveloper.server.domain.quest.domain.QuestProgress;
@@ -32,10 +31,7 @@ public class QuestProgressService {
 	@Transactional
 	public List<QuestProgressDto> updateStretchingStreakQuests(Long userId, LocalDateTime occurredAt) {
 		LocalDate activityDate = occurredAt.toLocalDate();
-		List<Quest> quests = questRepository.findAllByMissionTypeAndFinishedAtAfterOrderByFinishedAtAsc(
-			QuestMissionType.STRETCHING_STREAK,
-			occurredAt
-		);
+		List<Quest> quests = questRepository.findAllByFinishedAtAfterOrderByFinishedAtAsc(occurredAt);
 		if (quests.isEmpty()) {
 			return List.of();
 		}

@@ -20,6 +20,10 @@ public class QuestMapper {
 
 	public QuestItem toQuestItem(QuestProgress progress) {
 		Quest quest = progress.getQuest();
+		return toQuestItem(quest, progress);
+	}
+
+	public QuestItem toQuestItem(Quest quest, QuestProgress progress) {
 		return new QuestItem(
 			quest.getId(),
 			quest.getName(),
@@ -27,7 +31,7 @@ public class QuestMapper {
 			quest.getType(),
 			quest.getRewardExp(),
 			quest.getTargetCount(),
-			progress.getCurrentCount(),
+			progress == null ? 0 : progress.getCurrentCount(),
 			quest.getFinishedAt()
 		);
 	}
