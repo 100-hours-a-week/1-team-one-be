@@ -4,6 +4,7 @@ import static com.raisedeveloper.server.global.exception.ErrorMessageConstants.*
 
 import java.time.LocalDateTime;
 
+import com.raisedeveloper.server.domain.common.enums.QuestMissionType;
 import com.raisedeveloper.server.domain.common.enums.QuestType;
 
 import jakarta.validation.constraints.NotBlank;
@@ -19,6 +20,8 @@ public record QuestCreateRequest(
 	String questImagePath,
 	@NotNull(message = QUEST_TYPE_REQUIRED_MESSAGE)
 	QuestType type,
+	@NotNull(message = QUEST_MISSION_TYPE_REQUIRED_MESSAGE)
+	QuestMissionType missionType,
 	@Positive(message = QUEST_REWARD_EXP_MIN_MESSAGE)
 	int rewardExp,
 	@Positive(message = QUEST_TARGET_COUNT_MIN_MESSAGE)
