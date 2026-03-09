@@ -36,6 +36,8 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
 	List<ExerciseSession> findByUserIdAndIsRoutineCompletedIsNullOrderByCreatedAtDesc(
 		Long userId);
 
+	Optional<ExerciseSession> findByUserIdAndScheduledAt(Long userId, LocalDateTime scheduledAt);
+
 	@Query("SELECT CASE WHEN COUNT(es) > 0 THEN true ELSE false END "
 		+ "FROM ExerciseSession es "
 		+ "WHERE es.user.id = :userId "

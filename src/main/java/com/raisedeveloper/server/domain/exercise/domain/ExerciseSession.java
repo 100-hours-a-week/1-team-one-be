@@ -42,9 +42,17 @@ public class ExerciseSession extends CreatedUpdatedEntity {
 
 	private Boolean isRoutineCompleted;
 
+	private LocalDateTime scheduledAt;
+
 	public ExerciseSession(User user, Routine routine) {
 		this.user = user;
 		this.routine = routine;
+	}
+
+	public ExerciseSession(User user, Routine routine, LocalDateTime scheduledAt) {
+		this.user = user;
+		this.routine = routine;
+		this.scheduledAt = scheduledAt;
 	}
 
 	public void sessionCompleted(LocalDateTime startAt, LocalDateTime endAt) {
