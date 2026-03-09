@@ -2,6 +2,9 @@ package com.raisedeveloper.server.domain.quest.application;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -58,18 +61,24 @@ public class QuestService {
 				.map(questMapper::toQuestItem)
 				.toList();
 		} else {
-			quests = getInProgressQuestProgresses(userId, LocalDateTime.now())
-				.stream()
-				.map(questMapper::toQuestItem)
-				.toList();
+			quests = getInProgressQuestItems(userId, LocalDateTime.now());
 		}
 		return questMapper.toListResponse(quests);
 	}
 
-	private List<QuestProgress> getInProgressQuestProgresses(Long userId, LocalDateTime now) {
-		return questProgressRepository.findByUserIdAndCompletedAtIsNullAndQuestFinishedAtAfterOrderByQuestFinishedAtAsc(
+	private List<QuestItem> getInProgressQuestItems(Long userId, LocalDateTime now) {
+		List<Quest> activeQuests = questRepository.findAllByFinishedAtAfterOrderByFinishedAtAsc(now);
+		if (activeQuests.isEmpty()) {
+			return List.of();
+		}
+
+		Map<Long, QuestProgress> progressMap = questProgressRepository.findAllByUserIdAndQuestIdIn(
 			userId,
-			now
-		);
+			activeQuests.stream().map(Quest::getId).toList()
+		).stream().collect(Collectors.toMap(progress -> progress.getQuest().getId(), Function.identity()));
+
+		return activeQuests.stream()
+			.map(quest -> questMapper.toQuestItem(quest, progressMap.get(quest.getId())))
+			.toList();
 	}
 }

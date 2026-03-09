@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Component;
 
+import com.raisedeveloper.server.domain.exercise.dto.QuestProgressDto;
 import com.raisedeveloper.server.domain.quest.domain.Quest;
 import com.raisedeveloper.server.domain.quest.domain.QuestProgress;
 import com.raisedeveloper.server.domain.quest.dto.QuestCreateResponse;
@@ -19,6 +20,10 @@ public class QuestMapper {
 
 	public QuestItem toQuestItem(QuestProgress progress) {
 		Quest quest = progress.getQuest();
+		return toQuestItem(quest, progress);
+	}
+
+	public QuestItem toQuestItem(Quest quest, QuestProgress progress) {
 		return new QuestItem(
 			quest.getId(),
 			quest.getName(),
@@ -26,8 +31,18 @@ public class QuestMapper {
 			quest.getType(),
 			quest.getRewardExp(),
 			quest.getTargetCount(),
-			progress.getCurrentCount(),
+			progress == null ? 0 : progress.getCurrentCount(),
 			quest.getFinishedAt()
+		);
+	}
+
+	public QuestProgressDto toProgressDto(QuestProgress progress) {
+		Quest quest = progress.getQuest();
+		return new QuestProgressDto(
+			quest.getId(),
+			quest.getName(),
+			quest.getTargetCount(),
+			progress.getCurrentCount()
 		);
 	}
 
