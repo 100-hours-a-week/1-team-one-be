@@ -6,8 +6,6 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-
-import com.raisedeveloper.server.global.outbox.domain.OutboxEvent;
 import com.raisedeveloper.server.global.outbox.domain.OutboxStatus;
 import com.raisedeveloper.server.global.outbox.infra.OutboxEventRepository;
 
@@ -29,19 +27,19 @@ public class OutboxStateService {
 	}
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
-	public void markPublished(Long outboxId) {
-		OutboxEvent outboxEvent = outboxEventRepository.findById(outboxId)
-			.orElseThrow();
-		outboxEvent.markPublished(LocalDateTime.now());
-		outboxEventRepository.save(outboxEvent);
+	public void markPublishedBatch(List<Long> outboxIds) {
+		if (outboxIds == null || outboxIds.isEmpty()) {
+			return;
+		}
+		outboxEventRepository.markPublishedBatch(outboxIds, LocalDateTime.now());
 	}
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
-	public void markRetry(Long outboxId, String errorMessage) {
-		OutboxEvent outboxEvent = outboxEventRepository.findById(outboxId)
-			.orElseThrow();
-		outboxEvent.markRetry(errorMessage == null ? "unknown" : truncate(errorMessage));
-		outboxEventRepository.save(outboxEvent);
+	public void markRetryBatch(List<Long> outboxIds, String errorMessage) {
+		if (outboxIds == null || outboxIds.isEmpty()) {
+			return;
+		}
+		outboxEventRepository.markRetryBatch(outboxIds, errorMessage == null ? "unknown" : truncate(errorMessage));
 	}
 
 	private String truncate(String value) {
