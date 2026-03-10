@@ -16,33 +16,33 @@ public interface LeaderboardRepository extends JpaRepository<LeaderboardSnapshot
 
 	@Query(value = """
 		WITH leaderboard AS (
-		    SELECT
-		        ROW_NUMBER() OVER (
-		            ORDER BY (uc.level * 1000 + uc.exp) DESC, uc.status_score DESC, u.id ASC
-		        ) AS rank_no,
-		        u.id AS userId,
-		        up.nickname AS nickname,
-		        up.image_path AS profileImageUrl,
-		        uc.level AS level,
-		        uc.exp AS exp,
-		        uc.status_score AS statusScore,
-		        uc.streak AS streak,
-		        (uc.level * 1000 + uc.exp) AS totalExp
-		    FROM users u
-		    JOIN user_profiles up ON up.user_id = u.id
-		    JOIN user_characters uc ON uc.user_id = u.id
-		    WHERE u.deleted_at IS NULL
+			SELECT
+				ROW_NUMBER() OVER (
+					ORDER BY (uc.level * 1000 + uc.exp) DESC, uc.status_score DESC, u.id ASC
+				) AS rank_no,
+				u.id AS userId,
+				up.nickname AS nickname,
+				up.image_path AS profileImageUrl,
+				uc.level AS level,
+				uc.exp AS exp,
+				uc.status_score AS statusScore,
+				uc.streak AS streak,
+				(uc.level * 1000 + uc.exp) AS totalExp
+			FROM users u
+			JOIN user_profiles up ON up.user_id = u.id
+			JOIN user_characters uc ON uc.user_id = u.id
+			WHERE u.deleted_at IS NULL
 		)
 		SELECT
-		    rank_no,
-		    userId,
-		    nickname,
-		    profileImageUrl,
-		    level,
-		    exp,
-		    statusScore,
-		    streak,
-		    totalExp
+			rank_no,
+			userId,
+			nickname,
+			profileImageUrl,
+			level,
+			exp,
+			statusScore,
+			streak,
+			totalExp
 		FROM leaderboard
 		ORDER BY rank_no ASC
 		""", nativeQuery = true)
