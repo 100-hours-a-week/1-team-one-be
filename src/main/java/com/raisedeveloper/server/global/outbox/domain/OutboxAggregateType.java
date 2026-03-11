@@ -7,7 +7,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum OutboxAggregateType {
 	EXERCISE_SESSION("EXERCISE_SESSION"),
-	USER_CHARACTER("USER_CHARACTER");
+	USER_CHARACTER("USER_CHARACTER"),
+	PUSH_DELIVERY("PUSH_DELIVERY");
 
 	private final String value;
 }

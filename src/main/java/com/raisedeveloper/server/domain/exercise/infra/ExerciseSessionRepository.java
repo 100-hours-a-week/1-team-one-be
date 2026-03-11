@@ -1,9 +1,11 @@
 package com.raisedeveloper.server.domain.exercise.infra;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -24,6 +26,7 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
 
 	@Query("SELECT es FROM ExerciseSession es "
 		+ "JOIN FETCH es.routine r "
+		+ "JOIN FETCH es.user u "
 		+ "WHERE es.id = :sessionId AND es.user.id = :userId")
 	Optional<ExerciseSession> findByIdAndUserIdWithRoutine(
 		@Param("sessionId") Long sessionId,
@@ -64,9 +67,13 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
 
 	@Query("SELECT es FROM ExerciseSession es "
 		+ "WHERE es.isRoutineCompleted IS NULL "
-		+ "AND es.updatedAt = es.createdAt "
-		+ "AND es.createdAt <= :cutoff")
-	List<ExerciseSession> findStaleUnupdatedSessions(@Param("cutoff") LocalDateTime cutoff);
+		+ "AND es.startAt IS NULL "
+		+ "AND es.createdAt <= :cutoff "
+		+ "ORDER BY es.createdAt ASC, es.id ASC")
+	List<ExerciseSession> findStaleUnupdatedSessions(
+		@Param("cutoff") LocalDateTime cutoff,
+		Pageable pageable
+	);
 
 	@Query("SELECT es.user.id as userId, MAX(es.createdAt) as lastCreatedAt "
 		+ "FROM ExerciseSession es "
@@ -74,9 +81,29 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
 		+ "GROUP BY es.user.id")
 	List<UserLastSessionProjection> findLatestSessionsByUserIds(@Param("userIds") List<Long> userIds);
 
+	@Query(value = """
+		SELECT
+			es.user_id AS userId,
+		    ROUND(
+		        SUM(CASE WHEN es.start_at IS NOT NULL THEN 1 ELSE 0 END) / COUNT(es.id),
+		        2
+		    ) AS weeklyFrequency
+		FROM exercise_sessions es
+		WHERE es.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+		  	AND es.user_id IN (:userIds)
+		GROUP BY es.user_id
+		""", nativeQuery = true)
+	List<WeeklyFrequencyProjection> findWeeklyFrequenciesByUserIds(@Param("userIds") List<Long> userIds);
+
 	interface UserLastSessionProjection {
 		Long getUserId();
 
 		LocalDateTime getLastCreatedAt();
+	}
+
+	interface WeeklyFrequencyProjection {
+		Long getUserId();
+
+		BigDecimal getWeeklyFrequency();
 	}
 }

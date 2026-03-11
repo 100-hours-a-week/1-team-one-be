@@ -8,10 +8,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.raisedeveloper.server.domain.exercise.application.ExerciseService;
 import com.raisedeveloper.server.domain.exercise.application.ExerciseSessionFacade;
+import com.raisedeveloper.server.domain.exercise.application.ExerciseSessionReportService;
 import com.raisedeveloper.server.domain.exercise.application.ExerciseSessionService;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseListResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionCompleteResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionReportCreateResponse;
+import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionReportDetailResponse;
+import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionReportListResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionUpdateRequest;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionValidListResponse;
@@ -28,6 +31,7 @@ public class ExerciseController {
 	private final ExerciseService exerciseService;
 	private final ExerciseSessionService exerciseSessionService;
 	private final ExerciseSessionFacade exerciseSessionFacade;
+	private final ExerciseSessionReportService exerciseSessionReportService;
 
 	@GetMapping("/exercises")
 	public ApiResponse<ExerciseListResponse> getAllExercises() {
@@ -73,5 +77,24 @@ public class ExerciseController {
 		ExerciseSessionReportCreateResponse response = exerciseSessionFacade
 			.completeExerciseSessionV2(userId, sessionId, request);
 		return ApiResponse.of("CREATE_SESSION_REPORT_SUCCESS", response);
+	}
+
+	@GetMapping("/me/exercise-sessions/reports")
+	public ApiResponse<ExerciseSessionReportListResponse> getSessionReports(
+		@CurrentUser Long userId
+	) {
+		ExerciseSessionReportListResponse response = exerciseSessionReportService
+			.getSessionReports(userId);
+		return ApiResponse.of("GET_SESSION_REPORTS_SUCCESS", response);
+	}
+
+	@GetMapping("/me/exercise-sessions/reports/{reportId}")
+	public ApiResponse<ExerciseSessionReportDetailResponse> getSessionReportDetail(
+		@CurrentUser Long userId,
+		@PathVariable Long reportId
+	) {
+		ExerciseSessionReportDetailResponse response = exerciseSessionReportService
+			.getSessionReportDetail(userId, reportId);
+		return ApiResponse.of("GET_SESSION_REPORT_DETAIL_SUCCESS", response);
 	}
 }

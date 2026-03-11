@@ -8,6 +8,9 @@ public final class PaginationConstants {
 	public static final int NOTIFICATION_DEFAULT_LIMIT = 10;
 	public static final int NOTIFICATION_MAX_LIMIT = 50;
 
+	public static final int LEADERBOARD_DEFAULT_LIMIT = 20;
+	public static final int LEADERBOARD_MAX_LIMIT = 50;
+
 	private PaginationConstants() {
 	}
 }

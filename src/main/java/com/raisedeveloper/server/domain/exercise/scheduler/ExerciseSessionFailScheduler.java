@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,22 +29,30 @@ import lombok.extern.slf4j.Slf4j;
 public class ExerciseSessionFailScheduler {
 
 	private static final long STALE_MINUTES = 15;
+	private static final int BATCH_SIZE = 1_000;
 
 	private final ExerciseSessionRepository exerciseSessionRepository;
 	private final ExerciseResultRepository exerciseResultRepository;
 	private final UserCharacterRepository userCharacterRepository;
 	private final NotificationService notificationService;
 
-	@Scheduled(cron = "0 */5 * * * *")
+	@Scheduled(cron = "0 */1 * * * *", scheduler = "defaultTaskScheduler")
 	@SchedulerLock(name = "ExerciseSessionFailScheduler.failStaleSessions", lockAtMostFor = "PT10M")
 	@Transactional
 	public void failStaleSessions() {
 		LocalDateTime now = LocalDateTime.now();
 		LocalDateTime cutoff = now.minusMinutes(STALE_MINUTES);
+		int processedCount = processBatch(cutoff, now);
+		log.info("세션 자동 실패 처리 완료: {} 건", processedCount);
+	}
 
-		List<ExerciseSession> staleSessions = exerciseSessionRepository.findStaleUnupdatedSessions(cutoff);
+	private int processBatch(LocalDateTime cutoff, LocalDateTime failedAt) {
+		List<ExerciseSession> staleSessions = exerciseSessionRepository.findStaleUnupdatedSessions(
+			cutoff,
+			PageRequest.of(0, BATCH_SIZE)
+		);
 		if (staleSessions.isEmpty()) {
-			return;
+			return 0;
 		}
 
 		List<Long> sessionIds = staleSessions.stream()
@@ -57,10 +66,10 @@ public class ExerciseSessionFailScheduler {
 				Collectors.counting()
 			));
 
-		results.forEach(result -> result.stepResultsFailed(now));
+		results.forEach(result -> result.stepResultsFailed(failedAt));
 
 		for (ExerciseSession session : staleSessions) {
-			session.sessionFailed(now);
+			session.sessionFailed(failedAt);
 			int failedCount = Math.toIntExact(
 				failedResultCounts.getOrDefault(session.getId(), 0L)
 			);
@@ -80,6 +89,6 @@ public class ExerciseSessionFailScheduler {
 			character.subtractStatusScore(failedCount);
 			notificationService.createStretchingFailed(session.getUser());
 		}
-		log.info("세션 자동 실패 처리 완료: {} 건", staleSessions.size());
+		return staleSessions.size();
 	}
 }

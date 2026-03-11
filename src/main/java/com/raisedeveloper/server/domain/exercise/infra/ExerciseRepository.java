@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import com.raisedeveloper.server.domain.exercise.domain.Exercise;
@@ -14,4 +15,7 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Long> {
 	List<Exercise> findByIsDeprecatedFalse();
 
 	Optional<Exercise> findByIdAndIsDeprecatedFalse(Long id);
+
+	@Query("SELECT DISTINCT e.bodyPart FROM Exercise e WHERE e.isDeprecated = false ORDER BY e.bodyPart")
+	List<String> findDistinctBodyPartsByIsDeprecatedFalse();
 }
