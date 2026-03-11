@@ -62,7 +62,26 @@ public interface LeaderboardRepository extends JpaRepository<LeaderboardSnapshot
 		Pageable pageable
 	);
 
+	List<LeaderboardSnapshotRank> findBySnapshotVersionAndRankNoLessThanOrderByRankNoDesc(
+		long snapshotVersion,
+		long rankNo,
+		Pageable pageable
+	);
+
+	List<LeaderboardSnapshotRank> findBySnapshotVersionAndRankNoBetweenOrderByRankNoAsc(
+		long snapshotVersion,
+		long startRankNo,
+		long endRankNo
+	);
+
 	Optional<LeaderboardSnapshotRank> findBySnapshotVersionAndUserId(long snapshotVersion, Long userId);
+
+	@Query("""
+		select max(lsr.rankNo)
+		from LeaderboardSnapshotRank lsr
+		where lsr.snapshotVersion = :snapshotVersion
+		""")
+	Optional<Long> findMaxRankNoBySnapshotVersion(@Param("snapshotVersion") long snapshotVersion);
 
 	@Query("""
 		select count(lsr) > 0

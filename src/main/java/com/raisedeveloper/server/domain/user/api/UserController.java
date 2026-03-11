@@ -27,6 +27,7 @@ import com.raisedeveloper.server.domain.user.dto.ProfileNicknameUpdateRequest;
 import com.raisedeveloper.server.domain.user.dto.UserMeAlarmSettingsResponse;
 import com.raisedeveloper.server.domain.user.dto.UserMeResponse;
 import com.raisedeveloper.server.domain.user.dto.UserProfileResponse;
+import com.raisedeveloper.server.domain.user.enums.LeaderboardDirection;
 import com.raisedeveloper.server.global.response.ApiResponse;
 import com.raisedeveloper.server.global.security.currentuser.CurrentUser;
 
@@ -50,9 +51,10 @@ public class UserController {
 	public ApiResponse<LeaderboardResponse> getLeaderboard(
 		@CurrentUser Long userId,
 		@RequestParam(value = "limit", required = false) Integer limit,
-		@RequestParam(value = "cursor", required = false) String cursor
+		@RequestParam(value = "cursor", required = false) String cursor,
+		@RequestParam(value = "direction", required = false) LeaderboardDirection direction
 	) {
-		LeaderboardResponse res = leaderboardService.getLeaderboard(userId, limit, cursor);
+		LeaderboardResponse res = leaderboardService.getLeaderboard(userId, limit, cursor, direction);
 		return ApiResponse.of("GET_LEADERBOARD_SUCCESS", res);
 	}
 
