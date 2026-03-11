@@ -70,6 +70,7 @@ public final class ErrorMessageConstants {
 	public static final String AI_ROUTINE_EYES_INVALID_MESSAGE = "눈 운동 루틴 데이터에 이상이 발생했습니다.";
 	public static final String AI_ROUTINE_GENERATION_FAILED_MESSAGE = "AI 루틴 생성에 실패했습니다.";
 	public static final String AI_USER_PROFILE_SYNC_FAILED_MESSAGE = "AI 사용자 프로필 동기화에 실패했습니다.";
+	public static final String AI_SATISFACTION_SYNC_FAILED_MESSAGE = "AI 만족도 동기화에 실패했습니다.";
 
 	// Post Domain (error reasons)
 	public static final String POST_NOT_FOUND_MESSAGE = "해당 게시글을 찾을 수 없습니다.";
