@@ -1,5 +1,8 @@
 package com.raisedeveloper.server.domain.user.application;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -30,6 +33,7 @@ import lombok.RequiredArgsConstructor;
 public class LeaderboardService {
 
 	private static final int PODIUM_SIZE = 3;
+	private static final ZoneId ZONE_ID = ZoneId.of("Asia/Seoul");
 
 	private final LeaderboardRepository leaderboardRepository;
 	private final LeaderboardCursorService leaderboardCursorService;
@@ -78,7 +82,8 @@ public class LeaderboardService {
 			podiumRows.stream().map(this::toRankItem).toList(),
 			window.rows().stream().map(this::toRankItem).toList(),
 			myRankItem,
-			new BiDirectionPagingResponse(window.prevCursor(), window.nextCursor(), window.hasPrev(), window.hasNext())
+			new BiDirectionPagingResponse(window.prevCursor(), window.nextCursor(), window.hasPrev(), window.hasNext()),
+			toLastUpdatedAt(snapshotVersion)
 		);
 	}
 
@@ -232,5 +237,11 @@ public class LeaderboardService {
 		boolean hasPrev,
 		boolean hasNext
 	) {
+	}
+
+	private LocalDateTime toLastUpdatedAt(long snapshotVersion) {
+		return Instant.ofEpochMilli(snapshotVersion)
+			.atZone(ZONE_ID)
+			.toLocalDateTime();
 	}
 }
