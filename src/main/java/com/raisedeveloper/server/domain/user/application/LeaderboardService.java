@@ -1,5 +1,7 @@
 package com.raisedeveloper.server.domain.user.application;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.springframework.data.domain.PageRequest;
@@ -9,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.raisedeveloper.server.domain.user.domain.LeaderboardSnapshotRank;
 import com.raisedeveloper.server.domain.user.dto.LeaderboardRankItem;
 import com.raisedeveloper.server.domain.user.dto.LeaderboardResponse;
+import com.raisedeveloper.server.domain.user.enums.LeaderboardDirection;
 import com.raisedeveloper.server.domain.user.infra.LeaderboardRepository;
 import com.raisedeveloper.server.domain.user.infra.UserCharacterRepository;
 import com.raisedeveloper.server.domain.user.infra.UserProfileRepository;
@@ -16,8 +19,8 @@ import com.raisedeveloper.server.domain.user.infra.UserRepository;
 import com.raisedeveloper.server.global.exception.CustomException;
 import com.raisedeveloper.server.global.exception.ErrorCode;
 import com.raisedeveloper.server.global.exception.ErrorDetail;
+import com.raisedeveloper.server.global.pagination.BiDirectionPagingResponse;
 import com.raisedeveloper.server.global.pagination.PaginationConstants;
-import com.raisedeveloper.server.global.pagination.PagingResponse;
 
 import lombok.RequiredArgsConstructor;
 
@@ -35,7 +38,8 @@ public class LeaderboardService {
 	private final UserCharacterRepository userCharacterRepository;
 	private final UserProfileRepository userProfileRepository;
 
-	public LeaderboardResponse getLeaderboard(Long userId, Integer limit, String cursor) {
+	public LeaderboardResponse getLeaderboard(Long userId, Integer limit, String cursor,
+		LeaderboardDirection direction) {
 		int size = normalizeLimit(limit);
 		LeaderboardCursor decoded = leaderboardCursorService.decode(cursor);
 		long snapshotVersion = decoded == null
@@ -50,19 +54,13 @@ public class LeaderboardService {
 			);
 		}
 
-		long lastRank = decoded == null ? 0L : decoded.lastRank();
+		long maxRank = leaderboardRepository.findMaxRankNoBySnapshotVersion(snapshotVersion)
+			.orElse(0L);
 
 		List<LeaderboardSnapshotRank> podiumRows =
 			leaderboardRepository.findBySnapshotVersionAndRankNoLessThanEqualOrderByRankNoAsc(
 				snapshotVersion,
 				PODIUM_SIZE
-			);
-
-		List<LeaderboardSnapshotRank> rankRows =
-			leaderboardRepository.findBySnapshotVersionAndRankNoGreaterThanOrderByRankNoAsc(
-				snapshotVersion,
-				lastRank,
-				PageRequest.of(0, size + 1)
 			);
 
 		LeaderboardRankItem myRankItem = leaderboardRepository.findBySnapshotVersionAndUserId(
@@ -72,17 +70,15 @@ public class LeaderboardService {
 			.map(this::toRankItem)
 			.orElseGet(() -> resolveMyRankNotFoundOrNull(userId));
 
-		boolean hasNext = rankRows.size() > size;
-		List<LeaderboardSnapshotRank> slicedRows = rankRows.stream()
-			.limit(size)
-			.toList();
-		String nextCursor = buildNextCursor(snapshotVersion, slicedRows, hasNext);
+		WindowResult window = decoded == null
+			? loadInitialWindow(snapshotVersion, size, myRankItem, maxRank)
+			: loadDirectionalWindow(snapshotVersion, size, decoded.lastRank(), direction, maxRank);
 
 		return new LeaderboardResponse(
 			podiumRows.stream().map(this::toRankItem).toList(),
-			slicedRows.stream().map(this::toRankItem).toList(),
+			window.rows().stream().map(this::toRankItem).toList(),
 			myRankItem,
-			new PagingResponse(nextCursor, hasNext)
+			new BiDirectionPagingResponse(window.prevCursor(), window.nextCursor(), window.hasPrev(), window.hasNext())
 		);
 	}
 
@@ -97,15 +93,6 @@ public class LeaderboardService {
 			);
 		}
 		return limit;
-	}
-
-	private String buildNextCursor(long snapshotVersion, List<LeaderboardSnapshotRank> rows, boolean hasNext) {
-		if (!hasNext || rows.isEmpty()) {
-			return null;
-		}
-
-		LeaderboardSnapshotRank last = rows.getLast();
-		return leaderboardCursorService.encode(snapshotVersion, last.getRankNo());
 	}
 
 	private LeaderboardRankItem toRankItem(LeaderboardSnapshotRank projection) {
@@ -129,5 +116,121 @@ public class LeaderboardService {
 		userCharacterRepository.findByUserId(userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.CHARACTER_NOT_SET));
 		return null;
+	}
+
+	private WindowResult loadInitialWindow(
+		long snapshotVersion,
+		int size,
+		LeaderboardRankItem myRankItem,
+		long maxRank
+	) {
+		if (maxRank == 0) {
+			return new WindowResult(List.of(), null, null, false, false);
+		}
+
+		if (myRankItem == null) {
+			List<LeaderboardSnapshotRank> rows = leaderboardRepository
+				.findBySnapshotVersionAndRankNoGreaterThanOrderByRankNoAsc(
+					snapshotVersion,
+					0L,
+					PageRequest.of(0, size)
+				);
+			return buildWindowResult(snapshotVersion, rows, maxRank);
+		}
+
+		long ranksAbove = size / 2L;
+		long ranksBelow = size - ranksAbove - 1L;
+		long startRank = Math.max(1L, myRankItem.rank() - ranksAbove);
+		long endRank = Math.min(maxRank, myRankItem.rank() + ranksBelow);
+
+		long actualWindowSize = endRank - startRank + 1L;
+		if (actualWindowSize < size) {
+			long missing = size - actualWindowSize;
+			startRank = Math.max(1L, startRank - missing);
+			endRank = Math.min(maxRank, startRank + size - 1L);
+			startRank = Math.max(1L, endRank - size + 1L);
+		}
+
+		List<LeaderboardSnapshotRank> rows = leaderboardRepository
+			.findBySnapshotVersionAndRankNoBetweenOrderByRankNoAsc(snapshotVersion, startRank, endRank);
+		return buildWindowResult(snapshotVersion, rows, maxRank);
+	}
+
+	private WindowResult loadDirectionalWindow(
+		long snapshotVersion,
+		int size,
+		long boundaryRank,
+		LeaderboardDirection direction,
+		long maxRank
+	) {
+		LeaderboardDirection resolvedDirection = direction == null ? LeaderboardDirection.NEXT : direction;
+		if (resolvedDirection == LeaderboardDirection.PREV) {
+			List<LeaderboardSnapshotRank> rows = leaderboardRepository
+				.findBySnapshotVersionAndRankNoLessThanOrderByRankNoDesc(
+					snapshotVersion,
+					boundaryRank,
+					PageRequest.of(0, size + 1)
+				);
+			boolean hasPrev = rows.size() > size;
+			List<LeaderboardSnapshotRank> sliced = new ArrayList<>(rows.stream().limit(size).toList());
+			Collections.reverse(sliced);
+			return buildWindowResult(snapshotVersion, sliced, maxRank, hasPrev);
+		}
+
+		List<LeaderboardSnapshotRank> rows = leaderboardRepository
+			.findBySnapshotVersionAndRankNoGreaterThanOrderByRankNoAsc(
+				snapshotVersion,
+				boundaryRank,
+				PageRequest.of(0, size + 1)
+			);
+		boolean hasNext = rows.size() > size;
+		List<LeaderboardSnapshotRank> sliced = rows.stream().limit(size).toList();
+		return buildWindowResult(snapshotVersion, sliced, maxRank, null, hasNext);
+	}
+
+	private WindowResult buildWindowResult(
+		long snapshotVersion,
+		List<LeaderboardSnapshotRank> rows,
+		long maxRank
+	) {
+		return buildWindowResult(snapshotVersion, rows, maxRank, null, null);
+	}
+
+	private WindowResult buildWindowResult(
+		long snapshotVersion,
+		List<LeaderboardSnapshotRank> rows,
+		long maxRank,
+		Boolean forcedHasPrev
+	) {
+		return buildWindowResult(snapshotVersion, rows, maxRank, forcedHasPrev, null);
+	}
+
+	private WindowResult buildWindowResult(
+		long snapshotVersion,
+		List<LeaderboardSnapshotRank> rows,
+		long maxRank,
+		Boolean forcedHasPrev,
+		Boolean forcedHasNext
+	) {
+		if (rows.isEmpty()) {
+			return new WindowResult(List.of(), null, null, false, false);
+		}
+
+		long firstRank = rows.getFirst().getRankNo();
+		long lastRank = rows.getLast().getRankNo();
+		boolean hasPrev = forcedHasPrev != null ? forcedHasPrev : firstRank > 1;
+		boolean hasNext = forcedHasNext != null ? forcedHasNext : lastRank < maxRank;
+		String prevCursor = hasPrev ? leaderboardCursorService.encode(snapshotVersion, firstRank) : null;
+		String nextCursor = hasNext ? leaderboardCursorService.encode(snapshotVersion, lastRank) : null;
+		return new WindowResult(rows, prevCursor, nextCursor, hasPrev, hasNext);
+	}
+
+	private record WindowResult(
+		List<LeaderboardSnapshotRank> rows,
+		String prevCursor,
+		String nextCursor,
+		boolean hasPrev,
+		boolean hasNext
+	) {
 	}
 }
