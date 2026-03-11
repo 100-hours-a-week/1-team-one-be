@@ -17,10 +17,10 @@ import com.raisedeveloper.server.domain.exercise.infra.ExerciseSessionRepository
 import com.raisedeveloper.server.domain.routine.domain.RoutineStep;
 import com.raisedeveloper.server.domain.routine.infra.RoutineStepRepository;
 import com.raisedeveloper.server.domain.satisfaction.client.AiSatisfactionClient;
-import com.raisedeveloper.server.domain.satisfaction.dto.AiExerciseSatisfactionDto;
-import com.raisedeveloper.server.domain.satisfaction.dto.AiExerciseSatisfactionSyncRequest;
 import com.raisedeveloper.server.domain.satisfaction.domain.ExerciseSatisfaction;
 import com.raisedeveloper.server.domain.satisfaction.domain.RoutineSatisfaction;
+import com.raisedeveloper.server.domain.satisfaction.dto.AiExerciseSatisfactionDto;
+import com.raisedeveloper.server.domain.satisfaction.dto.AiExerciseSatisfactionSyncRequest;
 import com.raisedeveloper.server.domain.satisfaction.dto.SatisfactionVoteRequest;
 import com.raisedeveloper.server.domain.satisfaction.dto.SatisfactionVoteResponse;
 import com.raisedeveloper.server.domain.satisfaction.infra.ExerciseSatisfactionRepository;
@@ -93,7 +93,8 @@ public class SatisfactionService {
 	}
 
 	private void upsertExerciseSatisfactions(ExerciseSession session, byte satisfaction) {
-		Map<Long, Exercise> exercisesById = routineStepRepository.findByRoutineIdWithExercise(session.getRoutine().getId())
+		Map<Long, Exercise> exercisesById = routineStepRepository.findByRoutineIdWithExercise(
+				session.getRoutine().getId())
 			.stream()
 			.map(RoutineStep::getExercise)
 			.collect(Collectors.toMap(
