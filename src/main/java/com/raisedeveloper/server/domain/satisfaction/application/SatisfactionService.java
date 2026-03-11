@@ -18,13 +18,11 @@ import com.raisedeveloper.server.domain.routine.domain.RoutineStep;
 import com.raisedeveloper.server.domain.routine.infra.RoutineStepRepository;
 import com.raisedeveloper.server.domain.satisfaction.client.AiSatisfactionClient;
 import com.raisedeveloper.server.domain.satisfaction.domain.ExerciseSatisfaction;
-import com.raisedeveloper.server.domain.satisfaction.domain.RoutineSatisfaction;
 import com.raisedeveloper.server.domain.satisfaction.dto.AiExerciseSatisfactionDto;
 import com.raisedeveloper.server.domain.satisfaction.dto.AiExerciseSatisfactionSyncRequest;
 import com.raisedeveloper.server.domain.satisfaction.dto.SatisfactionVoteRequest;
 import com.raisedeveloper.server.domain.satisfaction.dto.SatisfactionVoteResponse;
 import com.raisedeveloper.server.domain.satisfaction.infra.ExerciseSatisfactionRepository;
-import com.raisedeveloper.server.domain.satisfaction.infra.RoutineSatisfactionRepository;
 import com.raisedeveloper.server.global.exception.CustomException;
 import com.raisedeveloper.server.global.exception.ErrorCode;
 import com.raisedeveloper.server.global.exception.ErrorDetail;
@@ -38,7 +36,6 @@ public class SatisfactionService {
 
 	private final ExerciseSessionRepository exerciseSessionRepository;
 	private final RoutineStepRepository routineStepRepository;
-	private final RoutineSatisfactionRepository routineSatisfactionRepository;
 	private final ExerciseSatisfactionRepository exerciseSatisfactionRepository;
 	private final AiSatisfactionClient aiSatisfactionClient;
 
@@ -49,7 +46,6 @@ public class SatisfactionService {
 		validateVoteTarget(session, request.routineId());
 
 		byte satisfaction = request.satisfied() ? (byte)1 : (byte)-1;
-		upsertRoutineSatisfaction(session, satisfaction);
 		upsertExerciseSatisfactions(session, satisfaction);
 
 		return new SatisfactionVoteResponse(session.getId(), session.getRoutine().getId(), satisfaction);
@@ -81,15 +77,6 @@ public class SatisfactionService {
 		if (!session.getRoutine().getId().equals(routineId)) {
 			throw validationException("routineId", EXERCISE_SESSION_SATISFACTION_ROUTINE_MISMATCH_MESSAGE);
 		}
-	}
-
-	private void upsertRoutineSatisfaction(ExerciseSession session, byte satisfaction) {
-		RoutineSatisfaction routineSatisfaction = routineSatisfactionRepository
-			.findByUserIdAndRoutineId(session.getUser().getId(), session.getRoutine().getId())
-			.orElseGet(() -> new RoutineSatisfaction(session.getUser(), session.getRoutine(), satisfaction));
-
-		routineSatisfaction.updateSatisfaction(satisfaction);
-		routineSatisfactionRepository.save(routineSatisfaction);
 	}
 
 	private void upsertExerciseSatisfactions(ExerciseSession session, byte satisfaction) {
