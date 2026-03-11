@@ -16,6 +16,9 @@ import com.raisedeveloper.server.domain.exercise.domain.ExerciseSession;
 import com.raisedeveloper.server.domain.exercise.infra.ExerciseSessionRepository;
 import com.raisedeveloper.server.domain.routine.domain.RoutineStep;
 import com.raisedeveloper.server.domain.routine.infra.RoutineStepRepository;
+import com.raisedeveloper.server.domain.satisfaction.client.AiSatisfactionClient;
+import com.raisedeveloper.server.domain.satisfaction.dto.AiExerciseSatisfactionDto;
+import com.raisedeveloper.server.domain.satisfaction.dto.AiExerciseSatisfactionSyncRequest;
 import com.raisedeveloper.server.domain.satisfaction.domain.ExerciseSatisfaction;
 import com.raisedeveloper.server.domain.satisfaction.domain.RoutineSatisfaction;
 import com.raisedeveloper.server.domain.satisfaction.dto.SatisfactionVoteRequest;
@@ -37,6 +40,7 @@ public class SatisfactionService {
 	private final RoutineStepRepository routineStepRepository;
 	private final RoutineSatisfactionRepository routineSatisfactionRepository;
 	private final ExerciseSatisfactionRepository exerciseSatisfactionRepository;
+	private final AiSatisfactionClient aiSatisfactionClient;
 
 	public SatisfactionVoteResponse vote(Long userId, Long sessionId, SatisfactionVoteRequest request) {
 		ExerciseSession session = exerciseSessionRepository.findByIdAndUserIdWithRoutine(sessionId, userId)
@@ -49,6 +53,24 @@ public class SatisfactionService {
 		upsertExerciseSatisfactions(session, satisfaction);
 
 		return new SatisfactionVoteResponse(session.getId(), session.getRoutine().getId(), satisfaction);
+	}
+
+	@Transactional(readOnly = true)
+	public void syncAllExerciseSatisfactions() {
+		List<AiExerciseSatisfactionDto> satisfactions = exerciseSatisfactionRepository.findAllForAiSync()
+			.stream()
+			.map(row -> new AiExerciseSatisfactionDto(
+				row.getUserId(),
+				row.getExerciseId(),
+				row.getSatisfaction()
+			))
+			.toList();
+
+		if (satisfactions.isEmpty()) {
+			return;
+		}
+
+		aiSatisfactionClient.updateSatisfactions(new AiExerciseSatisfactionSyncRequest(satisfactions));
 	}
 
 	private void validateVoteTarget(ExerciseSession session, Long routineId) {
