@@ -49,6 +49,18 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
 		@Param("endAt") java.time.LocalDateTime endAt
 	);
 
+	@Query("SELECT COUNT(es) "
+		+ "FROM ExerciseSession es "
+		+ "WHERE es.user.id = :userId "
+		+ "AND es.isRoutineCompleted = true "
+		+ "AND es.startAt >= :startAt "
+		+ "AND es.startAt < :endAt")
+	long countCompletedInRange(
+		@Param("userId") Long userId,
+		@Param("startAt") LocalDateTime startAt,
+		@Param("endAt") LocalDateTime endAt
+	);
+
 	@Query("SELECT CAST(es.createdAt AS LocalDate) as date, "
 		+ "COUNT(es) as targetCount, "
 		+ "SUM(CASE WHEN es.isRoutineCompleted = true THEN 1 ELSE 0 END) as successCount "
