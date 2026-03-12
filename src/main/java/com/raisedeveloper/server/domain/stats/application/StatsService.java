@@ -2,7 +2,9 @@ package com.raisedeveloper.server.domain.stats.application;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.DayOfWeek;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -13,8 +15,11 @@ import org.springframework.transaction.annotation.Transactional;
 import com.raisedeveloper.server.domain.exercise.infra.ExerciseSessionRepository;
 import com.raisedeveloper.server.domain.stats.dto.GrassStatsProjection;
 import com.raisedeveloper.server.domain.stats.dto.GrassStatsResponse;
+import com.raisedeveloper.server.domain.stats.dto.StatsSummaryResponse;
 import com.raisedeveloper.server.domain.stats.enums.ViewType;
 import com.raisedeveloper.server.domain.stats.mapper.StatsMapper;
+import com.raisedeveloper.server.domain.user.application.UserCharacterService;
+import com.raisedeveloper.server.domain.user.domain.UserCharacter;
 import com.raisedeveloper.server.global.exception.CustomException;
 import com.raisedeveloper.server.global.exception.ErrorCode;
 import com.raisedeveloper.server.global.exception.ErrorDetail;
@@ -28,15 +33,37 @@ import lombok.extern.slf4j.Slf4j;
 @Transactional(readOnly = true)
 public class StatsService {
 
+	private static final ZoneId SEOUL_ZONE_ID = ZoneId.of("Asia/Seoul");
+
 	private final ExerciseSessionRepository exerciseSessionRepository;
+	private final UserCharacterService userCharacterService;
 	private final StatsMapper statsMapper;
+
+	public StatsSummaryResponse getSummaryStats(Long userId) {
+		UserCharacter character = userCharacterService.getByUserIdOrThrow(userId);
+		LocalDate today = LocalDate.now(SEOUL_ZONE_ID);
+
+		LocalDateTime todayStart = today.atStartOfDay();
+		LocalDateTime tomorrowStart = today.plusDays(1).atStartOfDay();
+		LocalDate weekStartDate = today.with(DayOfWeek.MONDAY);
+		LocalDateTime weekStart = weekStartDate.atStartOfDay();
+		LocalDateTime nextWeekStart = weekStartDate.plusWeeks(1).atStartOfDay();
+		LocalDateTime lastWeekStart = weekStartDate.minusWeeks(1).atStartOfDay();
+
+		return new StatsSummaryResponse(
+			character.getStreak(),
+			exerciseSessionRepository.countCompletedInRange(userId, todayStart, tomorrowStart),
+			exerciseSessionRepository.countCompletedInRange(userId, weekStart, nextWeekStart),
+			exerciseSessionRepository.countCompletedInRange(userId, lastWeekStart, weekStart)
+		);
+	}
 
 	public GrassStatsResponse getGrassStats(Long userId, ViewType viewType, String month) {
 		LocalDateTime startDate;
 		LocalDateTime endDate;
 
 		if (viewType == ViewType.WEEKLY) {
-			LocalDate today = LocalDate.now();
+			LocalDate today = LocalDate.now(SEOUL_ZONE_ID);
 			startDate = today.minusDays(6).atStartOfDay();
 			endDate = today.plusDays(1).atStartOfDay();
 		} else {
