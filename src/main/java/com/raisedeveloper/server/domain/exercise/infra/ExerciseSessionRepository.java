@@ -96,13 +96,13 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
 	@Query(value = """
 		SELECT
 			es.user_id AS userId,
-		    ROUND(
-		        SUM(CASE WHEN es.start_at IS NOT NULL THEN 1 ELSE 0 END) / COUNT(es.id),
-		        2
-		    ) AS weeklyFrequency
+			ROUND(
+				SUM(CASE WHEN es.start_at IS NOT NULL THEN 1 ELSE 0 END) / COUNT(es.id),
+				2
+			) AS weeklyFrequency
 		FROM exercise_sessions es
 		WHERE es.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-		  	AND es.user_id IN (:userIds)
+			AND es.user_id IN (:userIds)
 		GROUP BY es.user_id
 		""", nativeQuery = true)
 	List<WeeklyFrequencyProjection> findWeeklyFrequenciesByUserIds(@Param("userIds") List<Long> userIds);
@@ -111,10 +111,10 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
 		SELECT ROUND(AVG(TIMESTAMPDIFF(SECOND, es.created_at, es.start_at)))
 		FROM exercise_sessions es
 		WHERE es.user_id = :userId
-		  AND es.start_at IS NOT NULL
-		  AND es.start_at >= es.created_at
-		  AND (:startDate IS NULL OR es.created_at >= :startDate)
-		  AND (:endDate IS NULL OR es.created_at < :endDate)
+			AND es.start_at IS NOT NULL
+			AND es.start_at >= es.created_at
+			AND (:startDate IS NULL OR es.created_at >= :startDate)
+			AND (:endDate IS NULL OR es.created_at < :endDate)
 		""", nativeQuery = true)
 	Long findAverageReactionSecondsByUserId(
 		@Param("userId") Long userId,
@@ -125,17 +125,17 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
 	@Query(value = """
 		SELECT ranked.rank_no
 		FROM (
-		    SELECT
-		        user_id,
-		        DENSE_RANK() OVER (
-		            ORDER BY AVG(TIMESTAMPDIFF(SECOND, created_at, start_at)) ASC
-		        ) AS rank_no
-		    FROM exercise_sessions
-		    WHERE start_at IS NOT NULL
-		      AND start_at >= created_at
-		      AND (:startDate IS NULL OR created_at >= :startDate)
-		      AND (:endDate IS NULL OR created_at < :endDate)
-		    GROUP BY user_id
+			SELECT
+				user_id,
+				DENSE_RANK() OVER (
+					ORDER BY AVG(TIMESTAMPDIFF(SECOND, created_at, start_at)) ASC
+				) AS rank_no
+			FROM exercise_sessions
+			WHERE start_at IS NOT NULL
+				AND start_at >= created_at
+				AND (:startDate IS NULL OR created_at >= :startDate)
+				AND (:endDate IS NULL OR created_at < :endDate)
+			GROUP BY user_id
 		) ranked
 		WHERE ranked.user_id = :userId
 		""", nativeQuery = true)
@@ -148,13 +148,13 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
 	@Query(value = """
 		SELECT COUNT(*)
 		FROM (
-		    SELECT es.user_id
-		    FROM exercise_sessions es
-		    WHERE es.start_at IS NOT NULL
-		      AND es.start_at >= es.created_at
-		      AND (:startDate IS NULL OR es.created_at >= :startDate)
-		      AND (:endDate IS NULL OR es.created_at < :endDate)
-		    GROUP BY es.user_id
+			SELECT es.user_id
+			FROM exercise_sessions es
+			WHERE es.start_at IS NOT NULL
+				AND es.start_at >= es.created_at
+				AND (:startDate IS NULL OR es.created_at >= :startDate)
+				AND (:endDate IS NULL OR es.created_at < :endDate)
+			GROUP BY es.user_id
 		) ranked_users
 		""", nativeQuery = true)
 	long countReactionSpeedRankedUsers(
