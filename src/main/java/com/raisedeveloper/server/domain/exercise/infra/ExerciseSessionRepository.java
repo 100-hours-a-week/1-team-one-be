@@ -107,6 +107,61 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
 		""", nativeQuery = true)
 	List<WeeklyFrequencyProjection> findWeeklyFrequenciesByUserIds(@Param("userIds") List<Long> userIds);
 
+	@Query(value = """
+		SELECT ROUND(AVG(TIMESTAMPDIFF(SECOND, es.created_at, es.start_at)))
+		FROM exercise_sessions es
+		WHERE es.user_id = :userId
+		  AND es.start_at IS NOT NULL
+		  AND es.start_at >= es.created_at
+		  AND (:startDate IS NULL OR es.created_at >= :startDate)
+		  AND (:endDate IS NULL OR es.created_at < :endDate)
+		""", nativeQuery = true)
+	Long findAverageReactionSecondsByUserId(
+		@Param("userId") Long userId,
+		@Param("startDate") LocalDateTime startDate,
+		@Param("endDate") LocalDateTime endDate
+	);
+
+	@Query(value = """
+		SELECT ranked.rank_no
+		FROM (
+		    SELECT
+		        user_id,
+		        DENSE_RANK() OVER (
+		            ORDER BY AVG(TIMESTAMPDIFF(SECOND, created_at, start_at)) ASC
+		        ) AS rank_no
+		    FROM exercise_sessions
+		    WHERE start_at IS NOT NULL
+		      AND start_at >= created_at
+		      AND (:startDate IS NULL OR created_at >= :startDate)
+		      AND (:endDate IS NULL OR created_at < :endDate)
+		    GROUP BY user_id
+		) ranked
+		WHERE ranked.user_id = :userId
+		""", nativeQuery = true)
+	Integer findReactionSpeedRankByUserId(
+		@Param("userId") Long userId,
+		@Param("startDate") LocalDateTime startDate,
+		@Param("endDate") LocalDateTime endDate
+	);
+
+	@Query(value = """
+		SELECT COUNT(*)
+		FROM (
+		    SELECT es.user_id
+		    FROM exercise_sessions es
+		    WHERE es.start_at IS NOT NULL
+		      AND es.start_at >= es.created_at
+		      AND (:startDate IS NULL OR es.created_at >= :startDate)
+		      AND (:endDate IS NULL OR es.created_at < :endDate)
+		    GROUP BY es.user_id
+		) ranked_users
+		""", nativeQuery = true)
+	long countReactionSpeedRankedUsers(
+		@Param("startDate") LocalDateTime startDate,
+		@Param("endDate") LocalDateTime endDate
+	);
+
 	interface UserLastSessionProjection {
 		Long getUserId();
 
