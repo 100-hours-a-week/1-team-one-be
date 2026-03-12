@@ -15,7 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.raisedeveloper.server.domain.exercise.infra.ExerciseSessionRepository;
 import com.raisedeveloper.server.domain.stats.dto.GrassStatsProjection;
 import com.raisedeveloper.server.domain.stats.dto.GrassStatsResponse;
+import com.raisedeveloper.server.domain.stats.dto.ReactionSpeedResponse;
 import com.raisedeveloper.server.domain.stats.dto.StatsSummaryResponse;
+import com.raisedeveloper.server.domain.stats.enums.ReactionSpeedViewType;
 import com.raisedeveloper.server.domain.stats.enums.ViewType;
 import com.raisedeveloper.server.domain.stats.mapper.StatsMapper;
 import com.raisedeveloper.server.domain.user.application.UserCharacterService;
@@ -58,6 +60,32 @@ public class StatsService {
 		);
 	}
 
+	public ReactionSpeedResponse getReactionSpeed(Long userId, ReactionSpeedViewType viewType) {
+		LocalDateTime startDate = null;
+		LocalDateTime endDate = null;
+		LocalDate today = LocalDate.now(SEOUL_ZONE_ID);
+
+		if (viewType == ReactionSpeedViewType.WEEKLY) {
+			startDate = today.minusDays(6).atStartOfDay();
+			endDate = today.plusDays(1).atStartOfDay();
+		} else if (viewType == ReactionSpeedViewType.MONTHLY) {
+			YearMonth currentMonth = YearMonth.from(today);
+			startDate = currentMonth.atDay(1).atStartOfDay();
+			endDate = currentMonth.plusMonths(1).atDay(1).atStartOfDay();
+		}
+
+		Long averageReactionSeconds = exerciseSessionRepository.findAverageReactionSecondsByUserId(
+			userId,
+			startDate,
+			endDate
+		);
+		long rankedUsers = exerciseSessionRepository.countReactionSpeedRankedUsers(startDate, endDate);
+		Integer rank = exerciseSessionRepository.findReactionSpeedRankByUserId(userId, startDate, endDate);
+		Integer topRate = calculateTopRate(rank, rankedUsers);
+
+		return new ReactionSpeedResponse(averageReactionSeconds, topRate);
+	}
+
 	public GrassStatsResponse getGrassStats(Long userId, ViewType viewType, String month) {
 		LocalDateTime startDate;
 		LocalDateTime endDate;
@@ -98,5 +126,15 @@ public class StatsService {
 			response.grass().size());
 
 		return response;
+	}
+
+	private Integer calculateTopRate(Integer rank, long rankedUsers) {
+		if (rank == null || rankedUsers <= 0) {
+			return null;
+		}
+		if (rankedUsers == 1) {
+			return 1;
+		}
+		return Math.max(1, (int)Math.ceil(((rank - 1) * 100.0) / rankedUsers));
 	}
 }
