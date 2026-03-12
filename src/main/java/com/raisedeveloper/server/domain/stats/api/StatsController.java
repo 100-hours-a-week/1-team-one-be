@@ -7,6 +7,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.raisedeveloper.server.domain.stats.application.StatsService;
 import com.raisedeveloper.server.domain.stats.dto.GrassStatsResponse;
+import com.raisedeveloper.server.domain.stats.dto.ReactionSpeedResponse;
+import com.raisedeveloper.server.domain.stats.dto.StatsSummaryResponse;
+import com.raisedeveloper.server.domain.stats.enums.ReactionSpeedViewType;
 import com.raisedeveloper.server.domain.stats.enums.ViewType;
 import com.raisedeveloper.server.global.response.ApiResponse;
 import com.raisedeveloper.server.global.security.currentuser.CurrentUser;
@@ -20,6 +23,12 @@ public class StatsController {
 
 	private final StatsService statsService;
 
+	@GetMapping("/summary")
+	public ApiResponse<StatsSummaryResponse> getSummaryStats(@CurrentUser Long userId) {
+		StatsSummaryResponse response = statsService.getSummaryStats(userId);
+		return ApiResponse.of("GET_STATS_SUMMARY_SUCCESS", response);
+	}
+
 	@GetMapping("/grass")
 	public ApiResponse<GrassStatsResponse> getGrassStats(
 		@CurrentUser Long userId,
@@ -28,5 +37,14 @@ public class StatsController {
 	) {
 		GrassStatsResponse response = statsService.getGrassStats(userId, viewType, month);
 		return ApiResponse.of("GET_STATS_GRASS_SUCCESS", response);
+	}
+
+	@GetMapping("/reaction-speed")
+	public ApiResponse<ReactionSpeedResponse> getReactionSpeed(
+		@CurrentUser Long userId,
+		@RequestParam("view") ReactionSpeedViewType viewType
+	) {
+		ReactionSpeedResponse response = statsService.getReactionSpeed(userId, viewType);
+		return ApiResponse.of("GET_STATS_REACTION_SPEED_SUCCESS", response);
 	}
 }

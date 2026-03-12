@@ -49,6 +49,18 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
 		@Param("endAt") java.time.LocalDateTime endAt
 	);
 
+	@Query("SELECT COUNT(es) "
+		+ "FROM ExerciseSession es "
+		+ "WHERE es.user.id = :userId "
+		+ "AND es.isRoutineCompleted = true "
+		+ "AND es.startAt >= :startAt "
+		+ "AND es.startAt < :endAt")
+	long countCompletedInRange(
+		@Param("userId") Long userId,
+		@Param("startAt") LocalDateTime startAt,
+		@Param("endAt") LocalDateTime endAt
+	);
+
 	@Query("SELECT CAST(es.createdAt AS LocalDate) as date, "
 		+ "COUNT(es) as targetCount, "
 		+ "SUM(CASE WHEN es.isRoutineCompleted = true THEN 1 ELSE 0 END) as successCount "
@@ -84,16 +96,71 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
 	@Query(value = """
 		SELECT
 			es.user_id AS userId,
-		    ROUND(
-		        SUM(CASE WHEN es.start_at IS NOT NULL THEN 1 ELSE 0 END) / COUNT(es.id),
-		        2
-		    ) AS weeklyFrequency
+			ROUND(
+				SUM(CASE WHEN es.start_at IS NOT NULL THEN 1 ELSE 0 END) / COUNT(es.id),
+				2
+			) AS weeklyFrequency
 		FROM exercise_sessions es
 		WHERE es.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-		  	AND es.user_id IN (:userIds)
+			AND es.user_id IN (:userIds)
 		GROUP BY es.user_id
 		""", nativeQuery = true)
 	List<WeeklyFrequencyProjection> findWeeklyFrequenciesByUserIds(@Param("userIds") List<Long> userIds);
+
+	@Query(value = """
+		SELECT ROUND(AVG(TIMESTAMPDIFF(SECOND, es.created_at, es.start_at)))
+		FROM exercise_sessions es
+		WHERE es.user_id = :userId
+			AND es.start_at IS NOT NULL
+			AND es.start_at >= es.created_at
+			AND (:startDate IS NULL OR es.created_at >= :startDate)
+			AND (:endDate IS NULL OR es.created_at < :endDate)
+		""", nativeQuery = true)
+	Long findAverageReactionSecondsByUserId(
+		@Param("userId") Long userId,
+		@Param("startDate") LocalDateTime startDate,
+		@Param("endDate") LocalDateTime endDate
+	);
+
+	@Query(value = """
+		SELECT ranked.rank_no
+		FROM (
+			SELECT
+				user_id,
+				DENSE_RANK() OVER (
+					ORDER BY AVG(TIMESTAMPDIFF(SECOND, created_at, start_at)) ASC
+				) AS rank_no
+			FROM exercise_sessions
+			WHERE start_at IS NOT NULL
+				AND start_at >= created_at
+				AND (:startDate IS NULL OR created_at >= :startDate)
+				AND (:endDate IS NULL OR created_at < :endDate)
+			GROUP BY user_id
+		) ranked
+		WHERE ranked.user_id = :userId
+		""", nativeQuery = true)
+	Integer findReactionSpeedRankByUserId(
+		@Param("userId") Long userId,
+		@Param("startDate") LocalDateTime startDate,
+		@Param("endDate") LocalDateTime endDate
+	);
+
+	@Query(value = """
+		SELECT COUNT(*)
+		FROM (
+			SELECT es.user_id
+			FROM exercise_sessions es
+			WHERE es.start_at IS NOT NULL
+				AND es.start_at >= es.created_at
+				AND (:startDate IS NULL OR es.created_at >= :startDate)
+				AND (:endDate IS NULL OR es.created_at < :endDate)
+			GROUP BY es.user_id
+		) ranked_users
+		""", nativeQuery = true)
+	long countReactionSpeedRankedUsers(
+		@Param("startDate") LocalDateTime startDate,
+		@Param("endDate") LocalDateTime endDate
+	);
 
 	interface UserLastSessionProjection {
 		Long getUserId();
