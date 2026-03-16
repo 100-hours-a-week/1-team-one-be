@@ -10,20 +10,24 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.raisedeveloper.server.domain.user.application.LeaderboardService;
 import com.raisedeveloper.server.domain.user.application.UserService;
 import com.raisedeveloper.server.domain.user.dto.AlarmSettingsDndRequest;
 import com.raisedeveloper.server.domain.user.dto.AlarmSettingsDndResponse;
 import com.raisedeveloper.server.domain.user.dto.AlarmSettingsRequest;
 import com.raisedeveloper.server.domain.user.dto.CharacterCreateRequest;
 import com.raisedeveloper.server.domain.user.dto.CharacterCreateResponse;
+import com.raisedeveloper.server.domain.user.dto.LeaderboardResponse;
 import com.raisedeveloper.server.domain.user.dto.OnboardingResponse;
 import com.raisedeveloper.server.domain.user.dto.ProfileImageUpdateRequest;
 import com.raisedeveloper.server.domain.user.dto.ProfileNicknameUpdateRequest;
 import com.raisedeveloper.server.domain.user.dto.UserMeAlarmSettingsResponse;
 import com.raisedeveloper.server.domain.user.dto.UserMeResponse;
 import com.raisedeveloper.server.domain.user.dto.UserProfileResponse;
+import com.raisedeveloper.server.domain.user.enums.LeaderboardDirection;
 import com.raisedeveloper.server.global.response.ApiResponse;
 import com.raisedeveloper.server.global.security.currentuser.CurrentUser;
 
@@ -36,10 +40,22 @@ import lombok.RequiredArgsConstructor;
 public class UserController {
 
 	private final UserService userService;
+	private final LeaderboardService leaderboardService;
 
 	@GetMapping("/me")
 	public ApiResponse<UserMeResponse> getMe(@CurrentUser Long userId) {
 		return ApiResponse.of("GET_ME_SUCCESS", userService.getMe(userId));
+	}
+
+	@GetMapping("/rank")
+	public ApiResponse<LeaderboardResponse> getLeaderboard(
+		@CurrentUser Long userId,
+		@RequestParam(value = "limit", required = false) Integer limit,
+		@RequestParam(value = "cursor", required = false) String cursor,
+		@RequestParam(value = "direction", required = false) LeaderboardDirection direction
+	) {
+		LeaderboardResponse res = leaderboardService.getLeaderboard(userId, limit, cursor, direction);
+		return ApiResponse.of("GET_LEADERBOARD_SUCCESS", res);
 	}
 
 	@DeleteMapping("/me")

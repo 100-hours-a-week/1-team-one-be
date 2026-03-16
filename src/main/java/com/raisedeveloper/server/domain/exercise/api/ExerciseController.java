@@ -18,6 +18,9 @@ import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionReportListRe
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionResponse;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionUpdateRequest;
 import com.raisedeveloper.server.domain.exercise.dto.ExerciseSessionValidListResponse;
+import com.raisedeveloper.server.domain.satisfaction.application.SatisfactionService;
+import com.raisedeveloper.server.domain.satisfaction.dto.SatisfactionVoteRequest;
+import com.raisedeveloper.server.domain.satisfaction.dto.SatisfactionVoteResponse;
 import com.raisedeveloper.server.global.response.ApiResponse;
 import com.raisedeveloper.server.global.security.currentuser.CurrentUser;
 
@@ -32,6 +35,7 @@ public class ExerciseController {
 	private final ExerciseSessionService exerciseSessionService;
 	private final ExerciseSessionFacade exerciseSessionFacade;
 	private final ExerciseSessionReportService exerciseSessionReportService;
+	private final SatisfactionService satisfactionService;
 
 	@GetMapping("/exercises")
 	public ApiResponse<ExerciseListResponse> getAllExercises() {
@@ -96,5 +100,15 @@ public class ExerciseController {
 		ExerciseSessionReportDetailResponse response = exerciseSessionReportService
 			.getSessionReportDetail(userId, reportId);
 		return ApiResponse.of("GET_SESSION_REPORT_DETAIL_SUCCESS", response);
+	}
+
+	@PatchMapping("/me/exercise-sessions/{sessionId}/satisfaction")
+	public ApiResponse<SatisfactionVoteResponse> voteExerciseSessionSatisfaction(
+		@CurrentUser Long userId,
+		@PathVariable Long sessionId,
+		@Valid @RequestBody SatisfactionVoteRequest request
+	) {
+		SatisfactionVoteResponse response = satisfactionService.vote(userId, sessionId, request);
+		return ApiResponse.of("SAVE_EXERCISE_SESSION_SATISFACTION_SUCCESS", response);
 	}
 }

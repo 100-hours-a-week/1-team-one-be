@@ -1,5 +1,6 @@
 package com.raisedeveloper.server.domain.quest.domain;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import com.raisedeveloper.server.domain.common.domain.CreatedUpdatedEntity;
@@ -39,11 +40,39 @@ public class QuestProgress extends CreatedUpdatedEntity {
 	@Column(nullable = false)
 	private short currentCount;
 
+	private LocalDate lastProgressedOn;
+
 	private LocalDateTime completedAt;
 
 	public QuestProgress(User user, Quest quest) {
 		this.user = user;
 		this.quest = quest;
 		this.currentCount = 0;
+	}
+
+	public boolean isCompleted() {
+		return completedAt != null;
+	}
+
+	public void increaseCount() {
+		currentCount++;
+	}
+
+	public void resetCount(short count) {
+		currentCount = count;
+	}
+
+	public void updateLastProgressedOn(LocalDate date) {
+		lastProgressedOn = date;
+	}
+
+	public void complete(LocalDateTime completedAt) {
+		this.completedAt = completedAt;
+	}
+
+	public void completeIfTargetReached(LocalDateTime completedAt) {
+		if (currentCount >= quest.getTargetCount()) {
+			this.completedAt = completedAt;
+		}
 	}
 }

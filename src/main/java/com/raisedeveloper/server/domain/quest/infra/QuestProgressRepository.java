@@ -1,7 +1,7 @@
 package com.raisedeveloper.server.domain.quest.infra;
 
-import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -13,8 +13,7 @@ public interface QuestProgressRepository extends JpaRepository<QuestProgress, Lo
 
 	List<QuestProgress> findByUserIdAndCompletedAtIsNotNullOrderByCompletedAtDesc(Long userId);
 
-	List<QuestProgress> findByUserIdAndCompletedAtIsNullAndQuestFinishedAtAfterOrderByQuestFinishedAtAsc(
-		Long userId,
-		LocalDateTime now
-	);
+	List<QuestProgress> findAllByUserIdAndQuestIdIn(Long userId, List<Long> questIds);
+
+	Optional<QuestProgress> findByUserIdAndQuestId(Long userId, Long questId);
 }

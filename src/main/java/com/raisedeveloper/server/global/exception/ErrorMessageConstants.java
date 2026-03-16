@@ -49,6 +49,12 @@ public final class ErrorMessageConstants {
 	public static final String EXERCISE_TYPE_MISMATCH_MESSAGE = "운동 타입이 일치하지 않습니다.";
 	public static final String EXERCISE_SESSION_NOT_FOUND_MESSAGE = "운동 세션을 찾을 수 없습니다.";
 	public static final String EXERCISE_SESSION_REPORT_NOT_FOUND_MESSAGE = "운동 세션 리포트를 찾을 수 없습니다.";
+	public static final String EXERCISE_SESSION_SATISFACTION_ROUTINE_REQUIRED_MESSAGE = "루틴 ID는 필수입니다.";
+	public static final String EXERCISE_SESSION_SATISFACTION_REQUIRED_MESSAGE = "만족도 값은 필수입니다.";
+	public static final String EXERCISE_SESSION_SATISFACTION_ROUTINE_MISMATCH_MESSAGE =
+		"운동 세션의 루틴과 요청한 루틴 ID가 일치하지 않습니다.";
+	public static final String EXERCISE_SESSION_SATISFACTION_UNAVAILABLE_MESSAGE =
+		"종료된 운동 세션만 만족도를 평가할 수 있습니다.";
 
 	// AI server (error reasons)
 	public static final String AI_SERVER_CONNECTION_FAILED_MESSAGE = "AI 서버에 연결할 수 없습니다.";
@@ -64,6 +70,7 @@ public final class ErrorMessageConstants {
 	public static final String AI_ROUTINE_EYES_INVALID_MESSAGE = "눈 운동 루틴 데이터에 이상이 발생했습니다.";
 	public static final String AI_ROUTINE_GENERATION_FAILED_MESSAGE = "AI 루틴 생성에 실패했습니다.";
 	public static final String AI_USER_PROFILE_SYNC_FAILED_MESSAGE = "AI 사용자 프로필 동기화에 실패했습니다.";
+	public static final String AI_SATISFACTION_SYNC_FAILED_MESSAGE = "AI 만족도 동기화에 실패했습니다.";
 
 	// Post Domain (error reasons)
 	public static final String POST_NOT_FOUND_MESSAGE = "해당 게시글을 찾을 수 없습니다.";
