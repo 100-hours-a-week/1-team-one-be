@@ -287,8 +287,8 @@ public class AlarmScheduleService {
 			local leaseUntil = ARGV[3]
 			local candidates = redis.call('ZRANGEBYSCORE', dueKey, '-inf', nowScore, 'LIMIT', 0, limit)
 			for i, member in ipairs(candidates) do
-			  redis.call('ZREM', dueKey, member)
-			  redis.call('ZADD', processingKey, leaseUntil, member)
+				redis.call('ZREM', dueKey, member)
+			 	redis.call('ZADD', processingKey, leaseUntil, member)
 			end
 			return candidates
 			""");
