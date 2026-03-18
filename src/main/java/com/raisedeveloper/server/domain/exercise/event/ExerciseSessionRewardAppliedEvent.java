@@ -13,6 +13,7 @@ public record ExerciseSessionRewardAppliedEvent(
 	LocalDateTime endAt,
 	boolean routineCompleted,
 	long completedCount,
+	boolean firstCompletionToday,
 	short level,
 	int previousExp,
 	int earnedExp,
