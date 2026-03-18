@@ -1,8 +1,11 @@
 package com.raisedeveloper.server.domain.exercise.event;
 
+import java.util.List;
+
 import org.springframework.stereotype.Component;
 
 import com.raisedeveloper.server.global.outbox.application.OutboxEventStore;
+import com.raisedeveloper.server.global.outbox.application.OutboxEventStore.OutboxStoreCommand;
 import com.raisedeveloper.server.global.outbox.domain.OutboxAggregateType;
 import com.raisedeveloper.server.global.outbox.domain.OutboxEventType;
 
@@ -60,5 +63,23 @@ public class AlarmEventPublisher {
 			event.userId().toString(),
 			event
 		);
+	}
+
+	public void publishDueUsers(List<AlarmDueUserEvent> events) {
+		if (events == null || events.isEmpty()) {
+			return;
+		}
+
+		outboxEventStore.storeBatch(events.stream()
+			.map(event -> new OutboxStoreCommand(
+				event.eventId(),
+				OutboxAggregateType.ALARM,
+				event.userId().toString(),
+				ExerciseKafkaTopics.ALARM_DUE_USER_V1,
+				OutboxEventType.ALARM_DUE_USER,
+				event.userId().toString(),
+				event
+			))
+			.toList());
 	}
 }

@@ -1,5 +1,8 @@
 package com.raisedeveloper.server.global.outbox.application;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,5 +61,43 @@ public class OutboxEventStore {
 			);
 			throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
 		}
+	}
+
+	@Transactional
+	public void storeBatch(List<OutboxStoreCommand> commands) {
+		if (commands == null || commands.isEmpty()) {
+			return;
+		}
+
+		List<OutboxEvent> outboxEvents = new ArrayList<>(commands.size());
+		try {
+			for (OutboxStoreCommand command : commands) {
+				String payloadJson = objectMapper.writeValueAsString(command.payload());
+				outboxEvents.add(new OutboxEvent(
+					command.eventId(),
+					command.aggregateType().getValue(),
+					command.aggregateId(),
+					command.topic(),
+					command.eventType().getValue(),
+					command.messageKey(),
+					payloadJson
+				));
+			}
+			outboxEventRepository.saveAll(outboxEvents);
+		} catch (JsonProcessingException e) {
+			log.error("Outbox batch payload serialization failed: size={}", commands.size(), e);
+			throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+		}
+	}
+
+	public record OutboxStoreCommand(
+		String eventId,
+		OutboxAggregateType aggregateType,
+		String aggregateId,
+		String topic,
+		OutboxEventType eventType,
+		String messageKey,
+		Object payload
+	) {
 	}
 }
