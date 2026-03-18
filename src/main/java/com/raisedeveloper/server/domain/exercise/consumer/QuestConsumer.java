@@ -28,7 +28,8 @@ public class QuestConsumer {
 	)
 	@Transactional
 	public void consume(String message) throws Exception {
-		ExerciseSessionRewardAppliedEvent event = objectMapper.readValue(message, ExerciseSessionRewardAppliedEvent.class);
+		ExerciseSessionRewardAppliedEvent event = objectMapper.readValue(message,
+			ExerciseSessionRewardAppliedEvent.class);
 		if (!consumerIdempotencyService.markProcessedIfFirst(
 			ExerciseConsumerConstants.QUEST_CONSUMER_NAME,
 			event.eventId()
