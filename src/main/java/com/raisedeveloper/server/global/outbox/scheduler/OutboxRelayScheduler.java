@@ -4,8 +4,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
-
 import com.raisedeveloper.server.global.outbox.application.OutboxRelayService;
 
 import lombok.RequiredArgsConstructor;
@@ -25,7 +23,6 @@ public class OutboxRelayScheduler {
 		fixedDelayString = "${app.outbox.relay.fixed-delay-ms:1000}",
 		scheduler = "outboxTaskScheduler"
 	)
-	@SchedulerLock(name = "OutboxRelayScheduler.relay", lockAtMostFor = "PT30S")
 	public void relay() {
 		outboxRelayService.relayPendingBatch(batchSize);
 	}

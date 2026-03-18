@@ -37,4 +37,28 @@ public class AlarmEventPublisher {
 			event
 		);
 	}
+
+	public void publishSessionFailed(AlarmSessionFailedEvent event) {
+		outboxEventStore.store(
+			event.eventId(),
+			OutboxAggregateType.ALARM,
+			event.userId().toString(),
+			ExerciseKafkaTopics.ALARM_SESSION_FAILED_V1,
+			OutboxEventType.ALARM_SESSION_FAILED,
+			event.userId().toString(),
+			event
+		);
+	}
+
+	public void publishDueUser(AlarmDueUserEvent event) {
+		outboxEventStore.store(
+			event.eventId(),
+			OutboxAggregateType.ALARM,
+			event.userId().toString(),
+			ExerciseKafkaTopics.ALARM_DUE_USER_V1,
+			OutboxEventType.ALARM_DUE_USER,
+			event.userId().toString(),
+			event
+		);
+	}
 }

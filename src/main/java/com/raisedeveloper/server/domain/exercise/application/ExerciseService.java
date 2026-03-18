@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,10 +42,32 @@ public class ExerciseService {
 
 	@Transactional
 	public ExerciseSession createSession(User user) {
+		return createSessionInternal(user, null);
+	}
+
+	@Transactional
+	public ExerciseSession createScheduledSession(User user, LocalDateTime scheduledAt) {
+		ExerciseSession existingSession = exerciseSessionRepository.findByUserIdAndScheduledAt(user.getId(), scheduledAt)
+			.orElse(null);
+		if (existingSession != null) {
+			return existingSession;
+		}
+
+		try {
+			return createSessionInternal(user, scheduledAt);
+		} catch (DataIntegrityViolationException e) {
+			return exerciseSessionRepository.findByUserIdAndScheduledAt(user.getId(), scheduledAt)
+				.orElseThrow(() -> e);
+		}
+	}
+
+	private ExerciseSession createSessionInternal(User user, LocalDateTime scheduledAt) {
 		Routine activeRoutine = routineRepository.findLeastRecentlyUsedByUserId(user.getId())
 			.orElseThrow(() -> new CustomException(ErrorCode.ROUTINE_NOT_FOUND));
 
-		ExerciseSession session = new ExerciseSession(user, activeRoutine);
+		ExerciseSession session = scheduledAt == null
+			? new ExerciseSession(user, activeRoutine)
+			: new ExerciseSession(user, activeRoutine, scheduledAt);
 		ExerciseSession savedSession = exerciseSessionRepository.save(session);
 
 		List<RoutineStep> routineSteps = routineStepRepository

@@ -8,7 +8,9 @@ import lombok.RequiredArgsConstructor;
 public enum OutboxEventType {
 	EXERCISE_SESSION_COMPLETED("ExerciseSessionCompletedEvent"),
 	EXERCISE_SESSION_REWARD_APPLIED("ExerciseSessionRewardAppliedEvent"),
+	ALARM_DUE_USER("AlarmDueUserEvent"),
 	ALARM_SESSION_CREATED("ExerciseSessionCreatedEvent"),
+	ALARM_SESSION_FAILED("AlarmSessionFailedEvent"),
 	ALARM_PUSH_RESULT("ExerciseSessionPushResultEvent");
 
 	private final String value;
