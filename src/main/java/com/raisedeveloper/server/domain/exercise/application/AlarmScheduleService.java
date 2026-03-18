@@ -152,13 +152,15 @@ public class AlarmScheduleService {
 			return null;
 		}
 
-		LocalDateTime nextFireAt = baseTime.truncatedTo(ChronoUnit.MINUTES)
+		// 1. 기준 일시 = 현재 + interval
+		LocalDateTime threshold = baseTime.truncatedTo(ChronoUnit.MINUTES)
 			.plusMinutes(settings.getAlarmInterval());
 
+		// 2. DND 확인, 설정되어 있는 경우 다음 기준 일시 = dnd 종료 시각 + interval
 		if (settings.isDnd()) {
 			LocalDateTime dndFinishedAt = settings.getDndFinishedAt();
-			if (dndFinishedAt != null && nextFireAt.isBefore(dndFinishedAt)) {
-				nextFireAt = dndFinishedAt.plusMinutes(settings.getAlarmInterval());
+			if (dndFinishedAt != null && threshold.isBefore(dndFinishedAt)) {
+				threshold = dndFinishedAt.plusMinutes(settings.getAlarmInterval());
 			}
 		}
 
@@ -167,48 +169,33 @@ public class AlarmScheduleService {
 			return null;
 		}
 
-		if (!repeatDays.contains(nextFireAt.getDayOfWeek())) {
-			LocalDate nextRepeat = nextRepeatDay(nextFireAt.toLocalDate(), repeatDays);
-			if (nextRepeat == null) {
-				return null;
-			}
-			nextFireAt = LocalDateTime.of(nextRepeat, activeStart)
-				.plusMinutes(settings.getAlarmInterval());
-		}
-
-		LocalTime candidate = nextFireAt.toLocalTime();
 		LocalTime focusStart = settings.getFocusStartAt();
 		LocalTime focusEnd = settings.getFocusEndAt();
 
-		boolean inActive = !candidate.isBefore(activeStart) && !candidate.isAfter(activeEnd);
-		boolean inFocus = focusStart != null && focusEnd != null
-			&& !candidate.isBefore(focusStart) && !candidate.isAfter(focusEnd);
-
-		if (inActive && !inFocus) {
-			return nextFireAt;
-		}
-
-		if (!inActive) {
-			if (candidate.isAfter(activeEnd)) {
-				return moveToNextRepeatDay(nextFireAt.toLocalDate(), repeatDays, activeStart);
+		// 3. 반복 요일 내에서 후보 날짜 탐색
+		// 해당 일자부터 시작하여 alarm_settings 설정 바탕으로 유효 슬롯 검색
+		// 1주일 뒤로 밀리는 경우에는 스케줄링 하지 않고 null 반환
+		for (int i = 0; i <= MAX_LOOKAHEAD_DAYS; i++) {
+			LocalDate candidateDate = threshold.toLocalDate().plusDays(i);
+			if (!repeatDays.contains(candidateDate.getDayOfWeek())) {
+				continue;
 			}
 
-			LocalDateTime shifted = LocalDateTime.of(nextFireAt.toLocalDate(), activeStart)
-				.plusMinutes(settings.getAlarmInterval());
-
-			if (shifted.toLocalTime().isAfter(activeEnd)) {
-				return moveToNextRepeatDay(nextFireAt.toLocalDate(), repeatDays, activeStart);
+			LocalDateTime candidate = resolveCandidateForDate(
+				candidateDate,
+				threshold,
+				activeStart,
+				activeEnd,
+				focusStart,
+				focusEnd,
+				settings.getAlarmInterval()
+			);
+			if (candidate != null) {
+				return candidate;
 			}
-			return shifted;
 		}
 
-
-		LocalTime afterFocus = focusEnd.plusMinutes(settings.getAlarmInterval());
-		if (!afterFocus.isBefore(activeStart) && !afterFocus.isAfter(activeEnd)) {
-			return LocalDateTime.of(nextFireAt.toLocalDate(), afterFocus);
-		}
-
-		return moveToNextRepeatDay(nextFireAt.toLocalDate(), repeatDays, activeStart);
+		return null;
 	}
 
 	private Set<DayOfWeek> parseRepeatDays(String repeatDays) {
@@ -236,12 +223,49 @@ public class AlarmScheduleService {
 		return null;
 	}
 
-	private LocalDateTime moveToNextRepeatDay(LocalDate baseDate, Set<DayOfWeek> repeatDays, LocalTime activeStart) {
-		LocalDate nextRepeat = nextRepeatDay(baseDate, repeatDays);
-		if (nextRepeat == null) {
+	private LocalDateTime resolveCandidateForDate(
+		LocalDate candidateDate,
+		LocalDateTime threshold,
+		LocalTime activeStart,
+		LocalTime activeEnd,
+		LocalTime focusStart,
+		LocalTime focusEnd,
+		int intervalMinutes
+	) {
+		LocalDateTime windowStart = LocalDateTime.of(candidateDate, activeStart)
+			.plusMinutes(intervalMinutes);
+		LocalDateTime windowEnd = LocalDateTime.of(candidateDate, activeEnd);
+
+		LocalDateTime candidate = candidateDate.equals(threshold.toLocalDate())
+			? threshold
+			: windowStart;
+		if (candidate.isBefore(windowStart)) {
+			candidate = windowStart;
+		}
+		if (candidate.isAfter(windowEnd)) {
 			return null;
 		}
-		return LocalDateTime.of(nextRepeat, activeStart);
+
+		if (focusStart == null || focusEnd == null) {
+			return candidate;
+		}
+
+		LocalDateTime focusStartAt = LocalDateTime.of(candidateDate, focusStart);
+		LocalDateTime focusEndAt = LocalDateTime.of(candidateDate, focusEnd);
+		boolean inFocus = !candidate.isBefore(focusStartAt) && !candidate.isAfter(focusEndAt);
+		if (!inFocus) {
+			return candidate;
+		}
+
+		LocalDateTime afterFocus = focusEndAt.plusMinutes(intervalMinutes);
+		if (afterFocus.isBefore(windowStart)) {
+			afterFocus = windowStart;
+		}
+		if (afterFocus.isAfter(windowEnd)) {
+			return null;
+		}
+
+		return afterFocus;
 	}
 
 	private double toScore(LocalDateTime time) {
@@ -263,8 +287,8 @@ public class AlarmScheduleService {
 			local leaseUntil = ARGV[3]
 			local candidates = redis.call('ZRANGEBYSCORE', dueKey, '-inf', nowScore, 'LIMIT', 0, limit)
 			for i, member in ipairs(candidates) do
-			  redis.call('ZREM', dueKey, member)
-			  redis.call('ZADD', processingKey, leaseUntil, member)
+				redis.call('ZREM', dueKey, member)
+			 	redis.call('ZADD', processingKey, leaseUntil, member)
 			end
 			return candidates
 			""");
