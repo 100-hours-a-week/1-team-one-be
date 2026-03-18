@@ -208,12 +208,7 @@ public class AlarmScheduleService {
 			return LocalDateTime.of(nextFireAt.toLocalDate(), afterFocus);
 		}
 
-		LocalDateTime fallback = LocalDateTime.of(nextFireAt.toLocalDate(), activeStart)
-			.plusMinutes(settings.getAlarmInterval());
-		if (fallback.toLocalTime().isAfter(activeEnd)) {
-			return moveToNextRepeatDay(nextFireAt.toLocalDate(), repeatDays, activeStart);
-		}
-		return fallback;
+		return moveToNextRepeatDay(nextFireAt.toLocalDate(), repeatDays, activeStart);
 	}
 
 	private Set<DayOfWeek> parseRepeatDays(String repeatDays) {
