@@ -3,6 +3,7 @@ package com.raisedeveloper.server.domain.exercise.application;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 import org.springframework.stereotype.Service;
 
@@ -26,7 +27,7 @@ public class ExerciseSessionPushDispatchService {
 	private final PushService pushService;
 	private final AlarmEventPublisher alarmEventPublisher;
 
-	public void processSessionCreatedEvent(ExerciseSessionCreatedEvent event) {
+	public CompletableFuture<Void> processSessionCreatedEventAsync(ExerciseSessionCreatedEvent event) {
 		Optional<ExerciseSession> sessionOpt = exerciseSessionRepository.findByIdAndUserIdWithRoutine(
 			event.sessionId(),
 			event.userId()
@@ -35,12 +36,12 @@ public class ExerciseSessionPushDispatchService {
 			log.warn("Session not found for push event: eventId={}, sessionId={}, userId={}",
 				event.eventId(), event.sessionId(), event.userId());
 			publishPushResult(event, PushDeliveryStatus.FAILED_PERMANENT);
-			return;
+			return CompletableFuture.completedFuture(null);
 		}
 
 		ExerciseSession session = sessionOpt.get();
-		PushDeliveryStatus status = pushService.sendSessionPush(session.getUser(), session);
-		publishPushResult(event, status);
+		return pushService.sendSessionPushAsync(session.getUser(), session)
+			.thenAccept(status -> publishPushResult(event, status));
 	}
 
 	private void publishPushResult(ExerciseSessionCreatedEvent sourceEvent, PushDeliveryStatus status) {

@@ -14,7 +14,6 @@ import com.raisedeveloper.server.domain.exercise.event.ExerciseKafkaTopics;
 import com.raisedeveloper.server.domain.exercise.event.ExerciseSessionCompletedEvent;
 import com.raisedeveloper.server.domain.exercise.event.ExerciseSessionEventPublisher;
 import com.raisedeveloper.server.domain.exercise.event.ExerciseSessionRewardAppliedEvent;
-import com.raisedeveloper.server.domain.quest.application.QuestProgressService;
 import com.raisedeveloper.server.global.consumer.application.ConsumerIdempotencyService;
 
 import lombok.RequiredArgsConstructor;
@@ -29,7 +28,6 @@ public class ExerciseSessionRewardConsumer {
 	private final ConsumerIdempotencyService consumerIdempotencyService;
 	private final SessionRewardService sessionRewardService;
 	private final ExerciseSessionEventPublisher exerciseSessionEventPublisher;
-	private final QuestProgressService questProgressService;
 
 	@KafkaListener(
 		topics = ExerciseKafkaTopics.SESSION_COMPLETED,
@@ -51,9 +49,6 @@ public class ExerciseSessionRewardConsumer {
 			event.completedCount(),
 			event.firstCompletionToday()
 		);
-		if (event.completedCount() > 0 && event.firstCompletionToday()) {
-			questProgressService.updateStretchingStreakQuests(event.userId(), event.occurredAt());
-		}
 		exerciseSessionEventPublisher.publishRewardApplied(new ExerciseSessionRewardAppliedEvent(
 			UUID.randomUUID().toString(),
 			event.eventId(),
@@ -65,6 +60,7 @@ public class ExerciseSessionRewardConsumer {
 			event.endAt(),
 			event.routineCompleted(),
 			event.completedCount(),
+			event.firstCompletionToday(),
 			reward.character().getLevel(),
 			reward.previousExp(),
 			reward.earnedExp(),

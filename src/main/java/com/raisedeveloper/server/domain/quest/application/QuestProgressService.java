@@ -13,7 +13,9 @@ import com.raisedeveloper.server.domain.quest.domain.QuestProgress;
 import com.raisedeveloper.server.domain.quest.infra.QuestProgressRepository;
 import com.raisedeveloper.server.domain.quest.infra.QuestRepository;
 import com.raisedeveloper.server.domain.quest.mapper.QuestMapper;
+import com.raisedeveloper.server.domain.user.application.UserCharacterService;
 import com.raisedeveloper.server.domain.user.domain.User;
+import com.raisedeveloper.server.domain.user.domain.UserCharacter;
 import com.raisedeveloper.server.domain.user.infra.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,7 @@ public class QuestProgressService {
 	private final QuestRepository questRepository;
 	private final QuestProgressRepository questProgressRepository;
 	private final UserRepository userRepository;
+	private final UserCharacterService userCharacterService;
 	private final QuestMapper questMapper;
 
 	@Transactional
@@ -37,16 +40,18 @@ public class QuestProgressService {
 		}
 
 		User user = userRepository.getReferenceById(userId);
+		UserCharacter character = userCharacterService.getByUserIdOrThrow(userId);
 
 		return quests.stream()
 			.map(quest -> getOrCreateProgress(user, quest))
-			.filter(questProgress -> applyStretchingStreakProgress(questProgress, activityDate, occurredAt))
+			.filter(questProgress -> applyStretchingStreakProgress(questProgress, character, activityDate, occurredAt))
 			.map(questMapper::toProgressDto)
 			.toList();
 	}
 
 	private boolean applyStretchingStreakProgress(
 		QuestProgress questProgress,
+		UserCharacter character,
 		LocalDate activityDate,
 		LocalDateTime occurredAt
 	) {
@@ -62,7 +67,10 @@ public class QuestProgressService {
 		}
 
 		questProgress.updateLastProgressedOn(activityDate);
-		questProgress.completeIfTargetReached(occurredAt);
+		boolean completedNow = questProgress.completeIfTargetReached(occurredAt);
+		if (completedNow) {
+			character.addExp(questProgress.getQuest().getRewardExp());
+		}
 		return true;
 	}
 

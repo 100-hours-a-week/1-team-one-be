@@ -70,9 +70,11 @@ public class QuestProgress extends CreatedUpdatedEntity {
 		this.completedAt = completedAt;
 	}
 
-	public void completeIfTargetReached(LocalDateTime completedAt) {
+	public boolean completeIfTargetReached(LocalDateTime completedAt) {
 		if (currentCount >= quest.getTargetCount()) {
 			this.completedAt = completedAt;
+			return true;
 		}
+		return false;
 	}
 }

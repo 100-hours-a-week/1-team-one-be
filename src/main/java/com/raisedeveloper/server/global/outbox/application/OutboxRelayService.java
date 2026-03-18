@@ -1,16 +1,16 @@
 package com.raisedeveloper.server.global.outbox.application;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-import org.springframework.data.domain.PageRequest;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
 
 import com.raisedeveloper.server.global.outbox.domain.OutboxEvent;
-import com.raisedeveloper.server.global.outbox.domain.OutboxStatus;
 import com.raisedeveloper.server.global.outbox.infra.OutboxEventRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -25,15 +25,13 @@ public class OutboxRelayService {
 	private final OutboxKafkaPublisher outboxKafkaPublisher;
 	private final OutboxStateService outboxStateService;
 
-	public List<OutboxEvent> loadPendingBatch(int batchSize) {
-		return outboxEventRepository.findByStatusOrderByIdAsc(
-			OutboxStatus.PENDING,
-			PageRequest.of(0, batchSize)
-		);
-	}
-
 	public void relayPendingBatch(int batchSize) {
-		List<OutboxEvent> pendingEvents = loadPendingBatch(batchSize);
+		List<Long> claimedIds = outboxStateService.claimPendingBatchIds(batchSize);
+		if (claimedIds.isEmpty()) {
+			return;
+		}
+
+		List<OutboxEvent> pendingEvents = outboxEventRepository.findByIdInOrderByIdAsc(claimedIds);
 		if (pendingEvents.isEmpty()) {
 			return;
 		}
@@ -57,17 +55,26 @@ public class OutboxRelayService {
 			// Handle each publish result below.
 		}
 
+		List<Long> publishedIds = new ArrayList<>(pendingPublishes.size());
+		Map<String, List<Long>> retryIdsByError = new HashMap<>();
 		for (PendingPublish pendingPublish : pendingPublishes) {
 			OutboxEvent outboxEvent = pendingPublish.outboxEvent();
 			try {
 				pendingPublish.future().join();
-				outboxStateService.markPublished(outboxEvent.getId());
+				publishedIds.add(outboxEvent.getId());
 			} catch (CompletionException e) {
 				Throwable cause = e.getCause() == null ? e : e.getCause();
-				outboxStateService.markRetry(outboxEvent.getId(), cause.getMessage());
+				String errorMessage = cause.getMessage() == null ? "unknown" : cause.getMessage();
+				retryIdsByError.computeIfAbsent(errorMessage, key -> new ArrayList<>())
+					.add(outboxEvent.getId());
 				log.error("Outbox publish failed: outboxId={}, topic={}, eventId={}",
 					outboxEvent.getId(), outboxEvent.getTopic(), outboxEvent.getEventId(), cause);
 			}
+		}
+
+		outboxStateService.markPublishedBatch(publishedIds);
+		for (Map.Entry<String, List<Long>> retryEntry : retryIdsByError.entrySet()) {
+			outboxStateService.markRetryBatch(retryEntry.getValue(), retryEntry.getKey());
 		}
 	}
 
