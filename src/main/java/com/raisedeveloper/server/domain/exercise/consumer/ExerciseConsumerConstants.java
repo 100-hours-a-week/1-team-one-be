@@ -11,6 +11,9 @@ public final class ExerciseConsumerConstants {
 	public static final String NOTIFICATION_CONSUMER_NAME = "exercise-session-notification-consumer";
 	public static final String NOTIFICATION_GROUP_ID = "exercise-session-notification-v1";
 
+	public static final String QUEST_CONSUMER_NAME = "exercise-session-quest-consumer";
+	public static final String QUEST_GROUP_ID = "exercise-session-quest-v1";
+
 	private ExerciseConsumerConstants() {
 	}
 }
