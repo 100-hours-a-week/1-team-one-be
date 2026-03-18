@@ -3,9 +3,12 @@ package com.raisedeveloper.server.global.outbox.application;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.raisedeveloper.server.global.outbox.domain.OutboxEvent;
 import com.raisedeveloper.server.global.outbox.domain.OutboxStatus;
 import com.raisedeveloper.server.global.outbox.infra.OutboxEventRepository;
 
@@ -18,7 +21,12 @@ public class OutboxStateService {
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public List<Long> claimPendingBatchIds(int batchSize) {
-		List<Long> ids = outboxEventRepository.findPendingIdsForUpdateSkipLocked(batchSize);
+		List<Long> ids = outboxEventRepository.findByStatusOrderByIdAsc(
+			OutboxStatus.PENDING,
+			PageRequest.of(0, batchSize)
+		).stream()
+			.map(OutboxEvent::getId)
+			.toList();
 		if (ids.isEmpty()) {
 			return List.of();
 		}

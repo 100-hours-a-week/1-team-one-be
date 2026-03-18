@@ -16,16 +16,6 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
 
 	List<OutboxEvent> findByStatusOrderByIdAsc(OutboxStatus status, Pageable pageable);
 
-	@Query(value = """
-		SELECT id
-		FROM outbox_events
-		WHERE status = 'PENDING'
-		ORDER BY id ASC
-		LIMIT :limit
-		FOR UPDATE SKIP LOCKED
-		""", nativeQuery = true)
-	List<Long> findPendingIdsForUpdateSkipLocked(@Param("limit") int limit);
-
 	List<OutboxEvent> findByIdInOrderByIdAsc(List<Long> ids);
 
 	@Modifying
