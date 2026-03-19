@@ -1,8 +1,12 @@
 package com.raisedeveloper.server.global.outbox.application;
 
-import java.util.ArrayList;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.List;
 
+import org.springframework.jdbc.core.BatchPreparedStatementSetter;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,6 +17,7 @@ import com.raisedeveloper.server.global.exception.ErrorCode;
 import com.raisedeveloper.server.global.outbox.domain.OutboxAggregateType;
 import com.raisedeveloper.server.global.outbox.domain.OutboxEvent;
 import com.raisedeveloper.server.global.outbox.domain.OutboxEventType;
+import com.raisedeveloper.server.global.outbox.domain.OutboxStatus;
 import com.raisedeveloper.server.global.outbox.infra.OutboxEventRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -25,6 +30,7 @@ public class OutboxEventStore {
 
 	private final OutboxEventRepository outboxEventRepository;
 	private final ObjectMapper objectMapper;
+	private final JdbcTemplate jdbcTemplate;
 
 	@Transactional
 	public void store(
@@ -69,24 +75,57 @@ public class OutboxEventStore {
 			return;
 		}
 
-		List<OutboxEvent> outboxEvents = new ArrayList<>(commands.size());
 		try {
-			for (OutboxStoreCommand command : commands) {
-				String payloadJson = objectMapper.writeValueAsString(command.payload());
-				outboxEvents.add(new OutboxEvent(
-					command.eventId(),
-					command.aggregateType().getValue(),
-					command.aggregateId(),
-					command.topic(),
-					command.eventType().getValue(),
-					command.messageKey(),
-					payloadJson
-				));
-			}
-			outboxEventRepository.saveAll(outboxEvents);
-		} catch (JsonProcessingException e) {
-			log.error("Outbox batch payload serialization failed: size={}", commands.size(), e);
+			List<String> payloads = commands.stream()
+				.map(command -> {
+					try {
+						return objectMapper.writeValueAsString(command.payload());
+					} catch (JsonProcessingException e) {
+						throw new PayloadSerializationException(e);
+					}
+				})
+				.toList();
+
+			Timestamp now = Timestamp.valueOf(java.time.LocalDateTime.now());
+			jdbcTemplate.batchUpdate("""
+				INSERT INTO outbox_events
+				(event_id, aggregate_type, aggregate_id, topic, event_type, message_key, payload, status, published_at, retry_count, last_error, created_at, updated_at)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+				""",
+				new BatchPreparedStatementSetter() {
+					@Override
+					public void setValues(PreparedStatement ps, int i) throws SQLException {
+						OutboxStoreCommand command = commands.get(i);
+						ps.setString(1, command.eventId());
+						ps.setString(2, command.aggregateType().getValue());
+						ps.setString(3, command.aggregateId());
+						ps.setString(4, command.topic());
+						ps.setString(5, command.eventType().getValue());
+						ps.setString(6, command.messageKey());
+						ps.setString(7, payloads.get(i));
+						ps.setString(8, OutboxStatus.PENDING.name());
+						ps.setTimestamp(9, null);
+						ps.setInt(10, 0);
+						ps.setString(11, null);
+						ps.setTimestamp(12, now);
+						ps.setTimestamp(13, now);
+					}
+
+					@Override
+					public int getBatchSize() {
+						return commands.size();
+					}
+				}
+			);
+		} catch (PayloadSerializationException e) {
+			log.error("Outbox batch payload serialization failed: size={}", commands.size(), e.getCause());
 			throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+		}
+	}
+
+	private static final class PayloadSerializationException extends RuntimeException {
+		private PayloadSerializationException(JsonProcessingException cause) {
+			super(cause);
 		}
 	}
 
