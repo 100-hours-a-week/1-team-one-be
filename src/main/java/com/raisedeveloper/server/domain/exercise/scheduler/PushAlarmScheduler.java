@@ -82,7 +82,8 @@ public class PushAlarmScheduler {
 				break;
 			}
 
-			Map<Long, UserAlarmSettings> settingsByUserId = userAlarmSettingsRepository.findByUserIdInWithUser(claimedUserIds)
+			Map<Long, UserAlarmSettings> settingsByUserId = userAlarmSettingsRepository.findByUserIdInWithUser(
+					claimedUserIds)
 				.stream()
 				.collect(Collectors.toMap(s -> s.getUser().getId(), Function.identity()));
 

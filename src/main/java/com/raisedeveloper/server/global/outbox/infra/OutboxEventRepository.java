@@ -33,8 +33,8 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
 	@Query("""
 		UPDATE OutboxEvent o
 		SET o.status = com.raisedeveloper.server.global.outbox.domain.OutboxStatus.PUBLISHED,
-		    o.publishedAt = :publishedAt,
-		    o.lastError = null
+			o.publishedAt = :publishedAt,
+			o.lastError = null
 		WHERE o.id IN :outboxIds
 		""")
 	int markPublishedBatch(
@@ -46,8 +46,8 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
 	@Query("""
 		UPDATE OutboxEvent o
 		SET o.status = com.raisedeveloper.server.global.outbox.domain.OutboxStatus.PENDING,
-		    o.retryCount = o.retryCount + 1,
-		    o.lastError = :errorMessage
+			o.retryCount = o.retryCount + 1,
+			o.lastError = :errorMessage
 		WHERE o.id IN :outboxIds
 		""")
 	int markRetryBatch(

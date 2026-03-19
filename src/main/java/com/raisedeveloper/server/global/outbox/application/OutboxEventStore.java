@@ -94,15 +94,15 @@ public class OutboxEventStore {
 				""",
 				new BatchPreparedStatementSetter() {
 					@Override
-					public void setValues(PreparedStatement ps, int i) throws SQLException {
-						OutboxStoreCommand command = commands.get(i);
+					public void setValues(PreparedStatement ps, int num) throws SQLException {
+						OutboxStoreCommand command = commands.get(num);
 						ps.setString(1, command.eventId());
 						ps.setString(2, command.aggregateType().getValue());
 						ps.setString(3, command.aggregateId());
 						ps.setString(4, command.topic());
 						ps.setString(5, command.eventType().getValue());
 						ps.setString(6, command.messageKey());
-						ps.setString(7, payloads.get(i));
+						ps.setString(7, payloads.get(num));
 						ps.setString(8, OutboxStatus.PENDING.name());
 						ps.setTimestamp(9, null);
 						ps.setInt(10, 0);
