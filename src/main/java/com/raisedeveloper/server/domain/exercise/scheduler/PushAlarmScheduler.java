@@ -3,6 +3,7 @@ package com.raisedeveloper.server.domain.exercise.scheduler;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -81,11 +82,12 @@ public class PushAlarmScheduler {
 				break;
 			}
 
-			Map<Long, UserAlarmSettings> settingsByUserId = userAlarmSettingsRepository.findByUserIdInWithUser(claimedUserIds)
+			Map<Long, UserAlarmSettings> settingsByUserId = userAlarmSettingsRepository.findByUserIdInWithUser(
+					claimedUserIds)
 				.stream()
 				.collect(Collectors.toMap(s -> s.getUser().getId(), Function.identity()));
 
-			int publishedInLoop = 0;
+			List<AlarmDueUserEvent> dueUserEvents = new ArrayList<>(claimedUserIds.size());
 			for (Long userId : claimedUserIds) {
 				UserAlarmSettings settings = settingsByUserId.get(userId);
 				if (settings == null || settings.getNextFireAt() == null) {
@@ -93,15 +95,16 @@ public class PushAlarmScheduler {
 					continue;
 				}
 
-				alarmEventPublisher.publishDueUser(new AlarmDueUserEvent(
+				dueUserEvents.add(new AlarmDueUserEvent(
 					UUID.randomUUID().toString(),
 					userId,
 					settings.getNextFireAt(),
 					LocalDateTime.now(),
 					UUID.randomUUID().toString()
 				));
-				publishedInLoop++;
 			}
+			alarmEventPublisher.publishDueUsers(dueUserEvents);
+			int publishedInLoop = dueUserEvents.size();
 
 			loopCount++;
 			totalClaimed += claimedUserIds.size();
