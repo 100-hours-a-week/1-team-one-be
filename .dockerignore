@@ -5,6 +5,7 @@
 
 # Build Outputs
 build/
+!build/libs/*.jar
 out/
 bin/
 

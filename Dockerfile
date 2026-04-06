@@ -7,7 +7,7 @@ ADD https://github.com/open-telemetry/opentelemetry-java-instrumentation/release
 RUN chmod 644 /app/opentelemetry-javaagent.jar
 
 # JAR 파일 복사
-COPY backend-app.jar app.jar
+COPY build/libs/backend-app.jar app.jar
 
 # 비루트 사용자로 실행
 USER nobody
