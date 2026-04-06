@@ -1,0 +1,19 @@
+version: 0.0
+os: linux
+files:
+  # GitHub 소스코드(또는 S3에 올라간 압축파일) 전체를 EC2의 목적지로 복사
+  - source: /
+    destination: /home/ubuntu/app/backend
+    overwrite: true
+permissions:
+  - object: /home/ubuntu/app/backend/scripts
+    pattern: "**"
+    owner: ubuntu
+    group: ubuntu
+    mode: 755 # 스크립트 실행 권한 부여
+hooks:
+  # 파일 복사 후 실행할 스크립트 정의
+  ApplicationStart:
+    - location: scripts/deploy.sh
+      timeout: 180 # 3분 내에 스크립트가 안 끝나면 배포 실패로 간주 (자동 롤백)
+      runas: ubuntu

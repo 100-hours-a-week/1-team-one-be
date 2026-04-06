@@ -1,4 +1,4 @@
-name: Backend CI/CD with Docker
+name: Backend CI with Docker Image
 
 on:
   pull_request:
@@ -26,13 +26,11 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup JDK 21 and 25
+      - name: Setup JDK 25
         uses: actions/setup-java@v5
         with:
           distribution: "temurin"
-          java-version: |
-            21
-            25
+          java-version: 25
 
       # Gradle 빌드 캐시 (선택적, 더 빠른 빌드)
       - name: Setup Gradle
@@ -44,14 +42,6 @@ jobs:
       # Gradle 빌드 (테스트 제외 - 속도 최적화, 필요시 포함)
       - name: Build with Gradle
         run: ./gradlew build -x test
-
-      # 빌드된 JAR 이름을 고정된 이름으로 변경 (Dockerfile COPY 편의성)
-      - name: Rename JAR
-        run: |
-          JAR_FILE=$(find build/libs -name "*.jar" | head -n 1)
-          if [ -f "$JAR_FILE" ]; then
-            mv "$JAR_FILE" backend-app.jar
-          fi
 
       # AWS 자격 증명 설정 (OIDC 방식)
       - name: Configure AWS Credentials
@@ -75,63 +65,63 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:pr-$PR_HEAD_SHA .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:pr-$PR_HEAD_SHA
 
-      # 현재 시간 구하기 (KST)
-      - name: Get Current Time
-        if: always()
-        uses: 1466587594/get-current-time@v2
-        id: current-time
-        with:
-          format: "YYYY-MM-DD HH:mm:ss"
-          utcOffset: "+09:00" # 한국 시간
-          timezone: "Asia/Seoul"
+      # # 현재 시간 구하기 (KST)
+      # - name: Get Current Time
+      #   if: always()
+      #   uses: 1466587594/get-current-time@v2
+      #   id: current-time
+      #   with:
+      #     format: "YYYY-MM-DD HH:mm:ss"
+      #     utcOffset: "+09:00" # 한국 시간
+      #     timezone: "Asia/Seoul"
 
-      # Phase 5: Discord 성공 알림
-      - name: Discord Notification - Success
-        if: success()
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          DISCORD_EMBEDS: |
-            [{
-              "title": "✅ BE CI 성공",
-              "color": 5763719,
-              "fields": [
-                {"name": "Repository", "value": "${{ github.repository }}", "inline": false},
-                {"name": "Merge To", "value": "${{ github.base_ref }}", "inline": false},
-                {"name": "Triggered By", "value": "${{ github.actor }}", "inline": false},
-                {"name": "Commit/PR", "value": "${{ github.event.pull_request.title }}", "inline": false},
-                {"name": "Actions Log", "value": "[Link to Action](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})", "inline": true}
-              ],
-              "footer": {
-                "text": "${{ steps.current-time.outputs.formattedTime }} KST"
-              }
-            }]
-        uses: Ilshidur/action-discord@0.4.0
-        with:
-          args: "v2 CI 파이프라인이 성공적으로 완료되었습니다. <@&${{ secrets.DISCORD_ROLE_BACKEND }}>"
+      # # Phase 5: Discord 성공 알림
+      # - name: Discord Notification - Success
+      #   if: success()
+      #   env:
+      #     DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      #     DISCORD_EMBEDS: |
+      #       [{
+      #         "title": "✅ BE CI 성공",
+      #         "color": 5763719,
+      #         "fields": [
+      #           {"name": "Repository", "value": "${{ github.repository }}", "inline": false},
+      #           {"name": "Merge To", "value": "${{ github.base_ref }}", "inline": false},
+      #           {"name": "Triggered By", "value": "${{ github.actor }}", "inline": false},
+      #           {"name": "Commit/PR", "value": "${{ github.event.pull_request.title }}", "inline": false},
+      #           {"name": "Actions Log", "value": "[Link to Action](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})", "inline": true}
+      #         ],
+      #         "footer": {
+      #           "text": "${{ steps.current-time.outputs.formattedTime }} KST"
+      #         }
+      #       }]
+      #   uses: Ilshidur/action-discord@0.4.0
+      #   with:
+      #     args: "v2 CI 파이프라인이 성공적으로 완료되었습니다. <@&${{ secrets.DISCORD_ROLE_BACKEND }}>"
 
-      # Phase 5: Discord 실패 알림
-      - name: Discord Notification - Failure
-        if: failure()
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          DISCORD_EMBEDS: |
-            [{
-              "title": "🚨 BE CI 실패",
-              "color": 15548997,
-              "fields": [
-                {"name": "Repository", "value": "${{ github.repository }}", "inline": false},
-                {"name": "Merge To", "value": "${{ github.base_ref }}", "inline": false},
-                {"name": "Triggered By", "value": "${{ github.actor }}", "inline": false},
-                {"name": "Commit/PR", "value": "${{ github.event.pull_request.title }}", "inline": false},
-                {"name": "Actions Log", "value": "[Link to Action](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})", "inline": true}
-              ],
-              "footer": {
-                "text": "${{ steps.current-time.outputs.formattedTime }} KST"
-              }
-            }]
-        uses: Ilshidur/action-discord@0.4.0
-        with:
-          args: "v2 CI 파이프라인 실행 중 오류가 발생했습니다. 로그를 확인해주세요. <@&${{ secrets.DISCORD_ROLE_BACKEND_ONCALL }}> "
+      # # Phase 5: Discord 실패 알림
+      # - name: Discord Notification - Failure
+      #   if: failure()
+      #   env:
+      #     DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      #     DISCORD_EMBEDS: |
+      #       [{
+      #         "title": "🚨 BE CI 실패",
+      #         "color": 15548997,
+      #         "fields": [
+      #           {"name": "Repository", "value": "${{ github.repository }}", "inline": false},
+      #           {"name": "Merge To", "value": "${{ github.base_ref }}", "inline": false},
+      #           {"name": "Triggered By", "value": "${{ github.actor }}", "inline": false},
+      #           {"name": "Commit/PR", "value": "${{ github.event.pull_request.title }}", "inline": false},
+      #           {"name": "Actions Log", "value": "[Link to Action](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})", "inline": true}
+      #         ],
+      #         "footer": {
+      #           "text": "${{ steps.current-time.outputs.formattedTime }} KST"
+      #         }
+      #       }]
+      #   uses: Ilshidur/action-discord@0.4.0
+      #   with:
+      #     args: "v2 CI 파이프라인 실행 중 오류가 발생했습니다. 로그를 확인해주세요. <@&${{ secrets.DISCORD_ROLE_BACKEND_ONCALL }}> "
 
   # 2. 이미지 리태깅 (Merge 시 실행)
   promote-image:
@@ -188,7 +178,6 @@ jobs:
           if [[ "$BASE_BRANCH" == "dev" ]]; then
             aws ecr put-image --repository-name $ECR_REPOSITORY --image-tag dev-latest --image-manifest "$MANIFEST" || echo "dev-latest already exists on this image. Skipping."
           elif [[ "$BASE_BRANCH" == "main" ]]; then
-            aws ecr put-image --repository-name $ECR_REPOSITORY --image-tag staging-latest --image-manifest "$MANIFEST" || echo "staging-latest already exists on this image. Skipping."
             aws ecr put-image --repository-name $ECR_REPOSITORY --image-tag production-latest --image-manifest "$MANIFEST" || echo "production-latest already exists on this image. Skipping."
           fi
 
@@ -199,12 +188,11 @@ jobs:
   deploy-dev:
     needs: promote-image
     if: github.event.pull_request.merged == true && github.base_ref == 'dev'
-    uses: ./.github/workflows/deploy-dev.yml
+    uses: ./.github/workflows/backend-cd.yml
     with:
       environment: dev
       image_uri: ${{ needs.promote-image.outputs.final_image_uri }}
-      instance_tag_name: "Environment" # EC2 태그 Key
-      instance_tag_value: "dev" # EC2 태그 Value
+      codedeploy_group: be-dev
       pr_number: ${{ github.event.pull_request.number }}
       pr_title: ${{ github.event.pull_request.title }}
       base_ref: ${{ github.base_ref }}
@@ -213,34 +201,15 @@ jobs:
       repository: ${{ github.repository }}
     secrets: inherit
 
-  # 3. Staging 배포 (main 브랜치 Merge 시)
-  deploy-staging:
+  # 3. Production 배포 (main 브랜치 Merge 시)
+  deploy-production:
     needs: promote-image
     if: github.event.pull_request.merged == true && github.base_ref == 'main'
-    uses: ./.github/workflows/deploy-asg-rolling.yml
-    with:
-      environment: staging
-      image_uri: ${{ needs.promote-image.outputs.final_image_uri }}
-      asg_name: "raisedeveloper-backend-staging-asg"
-      lt_id: "lt-011782f0d653730e9" # Staging용 시작 템플릿 ID
-      pr_number: ${{ github.event.pull_request.number }}
-      pr_title: ${{ github.event.pull_request.title }}
-      base_ref: ${{ github.base_ref }}
-      actor: ${{ github.actor }}
-      run_id: ${{ github.run_id }}
-      repository: ${{ github.repository }}
-    secrets: inherit
-
-  # 4. Production 배포 (Staging 성공 후 승인 필요)
-  deploy-production:
-    needs: [promote-image, deploy-staging]
-    if: github.event.pull_request.merged == true && github.base_ref == 'main'
-    uses: ./.github/workflows/deploy-asg-rolling.yml
+    uses: ./.github/workflows/backend-cd.yml
     with:
       environment: production
       image_uri: ${{needs.promote-image.outputs.final_image_uri}}
-      asg_name: "raisedeveloper-backend-production-asg"
-      lt_id: "lt-0dff81551d19e465f"
+      codedeploy_group: be-prod
       pr_number: ${{ github.event.pull_request.number }}
       pr_title: ${{ github.event.pull_request.title }}
       base_ref: ${{ github.base_ref }}
