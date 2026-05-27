@@ -25,6 +25,9 @@ docker compose pull backend
 echo "2. Restart Container"
 docker compose up -d backend
 
+echo "Reloading Nginx to recognize new container IP..."
+docker compose exec nginx nginx -s reload || echo "Nginx reload failed or Nginx is not running"
+
 echo "3. Health Check & Verification"
 IS_HEALTHY=false
 FOR_LIMIT=24 # 최대 120초 대기 (5초 * 24회)
